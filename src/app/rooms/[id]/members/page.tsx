@@ -68,9 +68,6 @@ const RoomMember = () => {
   const { user } = useAppContext();
   const [members, setMembers] = useState<Member[]>([]);
   const [isOwner, setIsOwner] = useState(false);
-  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
-  const [isConfirmRemoveModalOpen, setIsConfirmRemoveModalOpen] =
-    useState(false);
   const [memberToRemove, setMemberToRemove] = useState(null);
   const axiosPrivate = useAxiosPrivate();
   const {
@@ -127,14 +124,9 @@ const RoomMember = () => {
     }
   };
 
-  const addMember = () => {
-    setIsAddMemberModalOpen(true);
-  };
+  const addMember = () => {};
 
-  const removeMember = (member) => {
-    setMemberToRemove(member);
-    setIsConfirmRemoveModalOpen(true);
-  };
+  const removeMember = (member) => {};
 
   const handleRemoveMember = async () => {
     if (!id || !memberToRemove) return;
@@ -147,9 +139,6 @@ const RoomMember = () => {
     //   console.error(err);
     //   toast.error("Failed to remove member");
     // }
-
-    setIsConfirmRemoveModalOpen(false);
-    setMemberToRemove(null);
   };
 
   if (!roomDetail) {
@@ -171,7 +160,7 @@ const RoomMember = () => {
       <div className="container ">
         <div className="mb-4 flex justify-between gap-4 border rounded-md p-4 shadow-sm">
           <div className="flex gap-2 justify-start">
-            <TooltipProvider delayDuration={300}>
+            <TooltipProvider delayDuration={100}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link
@@ -213,7 +202,7 @@ const RoomMember = () => {
                 {(onClose) => (
                   <Form {...addTaskForm}>
                     <form
-                      onSubmit={addTaskForm.handleSubmit(onAddRoom)}
+                      // onSubmit={addTaskForm.handleSubmit(onAddRoom)}
                       className="space-y-6"
                     >
                       <ModalHeader className="flex flex-col gap-1">

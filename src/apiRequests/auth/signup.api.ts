@@ -1,9 +1,10 @@
-import axiosInstance from "@/app/common/util/axios/axiosInstance";
+import { axiosBase } from "@/app/common/util/axios/axiosBase";
+
 export interface SignUpData {
   email: string;
   password: string;
   fullName: string;
 }
 export const signupApi = async (data: SignUpData) => {
-  return axiosInstance.post("/auth/signup", data);
+  return axiosBase.post("/auth/signup", data);
 };

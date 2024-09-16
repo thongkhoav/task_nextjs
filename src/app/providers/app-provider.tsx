@@ -7,7 +7,17 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import { createContext } from "react";
 import { jwtDecode } from "jwt-decode";
 import ToastProvider from "./toast-provider";
-import { setCookieLocal } from "../common/util/cookie-action";
+import { clearCookieLocal, setCookieLocal } from "../common/util/cookie-action";
+import useAxiosPrivate from "../common/util/axios/useAxiosPrivate";
+import { ToastError, ToastSuccess } from "../common/util/toast";
+import { CircleUserRound, LogOut, UserRound } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useRouter } from "next/navigation";
 
 export enum RoleType {
   ADMIN = "ADMIN",
@@ -53,6 +63,8 @@ export default function AppProvider({
     return null;
   });
   const isAuthenticated = Boolean(user);
+  const axiosPrivate = useAxiosPrivate();
+  const router = useRouter();
 
   const setUser = useCallback((tokens: TokenPair | null) => {
     if (tokens) {
@@ -98,8 +110,22 @@ export default function AppProvider({
   };
 
   const handleLogout = async () => {
-    setUserState(null);
-    localStorage.removeItem("task_user");
+    try {
+      const task_user = localStorage.getItem("task_user");
+      const tokens = task_user ? JSON.parse(task_user) : null;
+      if (tokens) {
+        await axiosPrivate.post("/auth/logout", tokens);
+        setUserState(null);
+        localStorage.removeItem("task_user");
+        clearCookieLocal();
+        ToastSuccess("Sign out success");
+        router.push("/login");
+        router.refresh();
+      }
+    } catch (error: any) {
+      console.log(error);
+      ToastError(error.message);
+    }
   };
 
   useEffect(() => {
@@ -134,6 +160,28 @@ export default function AppProvider({
             logout: handleLogout,
           }}
         >
+          {user && isAuthenticated && (
+            <div className="w-full flex justify-center mt-5">
+              <div className="flex justify-between gap-5 px-5 min-w-80 py-2 bg-slate-200 rounded-md">
+                <div className="text-lg font-bold flex items-center gap-1">
+                  <CircleUserRound />
+                  {user.fullName}
+                </div>
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button onClick={handleLogout}>
+                        <LogOut size={25} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Sign out</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+          )}
           {children}
         </AppContext.Provider>
       </NextUIProvider>

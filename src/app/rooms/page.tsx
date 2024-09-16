@@ -91,103 +91,101 @@ export default function RoomsPage() {
   }
 
   return (
-    <div className="flex justify-center">
-      <div className="mt-10 min-w-[500px]">
-        <h1 className="text-2xl font-bold mb-4 flex justify-between items-center border rounded-md p-4 shadow-sm">
-          <span>{user?.fullName}</span>
-          <Button onPress={onOpen}>Add room</Button>
-          <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-            <ModalContent>
-              {(onClose) => (
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(onAddRoom)}
-                    className="space-y-6"
-                  >
-                    <ModalHeader className="flex flex-col gap-1">
-                      Add new room
-                    </ModalHeader>
-                    <ModalBody>
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="Room name"
-                                placeholder="Input room name..."
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="Room description"
-                                placeholder="Input room description..."
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </ModalBody>
-                    <ModalFooter>
-                      <Button color="danger" variant="light" onPress={onClose}>
-                        Close
-                      </Button>
-                      <Button color="primary" type="submit">
-                        Add
-                      </Button>
-                    </ModalFooter>
-                  </form>
-                </Form>
-              )}
-            </ModalContent>
-          </Modal>
-        </h1>
-
-        <div className="flex flex-col gap-2">
-          {rooms?.map((room, index) => (
-            <div
-              key={index}
-              className="border rounded-md px-5 py-2 shadow flex justify-between items-center"
-            >
-              <div>
-                {room.isJoined ? (
-                  <Link
-                    href={`/rooms/${room.id}/tasks`}
-                    className="text-xl font-bold underline cursor-pointer"
-                  >
-                    {room.name}
-                  </Link>
-                ) : (
-                  <span className="text-xl font-bold">{room.name}</span>
-                )}
-                <p className="text-sm">{room.description}</p>
-              </div>
-              {!room.isJoined && (
-                <button
-                  onClick={() => joinRoom(room.id)}
-                  className="text-sm px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded-sm"
+    <div className="min-h-screen">
+      <h1 className="text-2xl font-bold mb-4 flex justify-between items-center border rounded-md p-4 shadow-sm">
+        <span>{user?.fullName}</span>
+        <Button onPress={onOpen}>Add room</Button>
+        <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+          <ModalContent>
+            {(onClose) => (
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(onAddRoom)}
+                  className="space-y-6"
                 >
-                  Join room
-                </button>
+                  <ModalHeader className="flex flex-col gap-1">
+                    Add new room
+                  </ModalHeader>
+                  <ModalBody>
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="Room name"
+                              placeholder="Input room name..."
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="Room description"
+                              placeholder="Input room description..."
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </ModalBody>
+                  <ModalFooter>
+                    <Button color="danger" variant="light" onPress={onClose}>
+                      Close
+                    </Button>
+                    <Button color="primary" type="submit">
+                      Add
+                    </Button>
+                  </ModalFooter>
+                </form>
+              </Form>
+            )}
+          </ModalContent>
+        </Modal>
+      </h1>
+
+      <div className="flex flex-col gap-2">
+        {rooms?.map((room, index) => (
+          <div
+            key={index}
+            className="border rounded-md px-5 py-2 shadow flex justify-between items-center"
+          >
+            <div>
+              {room.isJoined ? (
+                <Link
+                  href={`/rooms/${room.id}/tasks`}
+                  className="text-xl font-bold underline cursor-pointer"
+                >
+                  {room.name}
+                </Link>
+              ) : (
+                <span className="text-xl font-bold">{room.name}</span>
               )}
+              <p className="text-sm">{room.description}</p>
             </div>
-          ))}
-        </div>
+            {!room.isJoined && (
+              <button
+                onClick={() => joinRoom(room.id)}
+                className="text-sm px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded-sm"
+              >
+                Join room
+              </button>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

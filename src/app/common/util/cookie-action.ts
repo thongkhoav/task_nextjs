@@ -17,3 +17,11 @@ export const setCookieLocal = (value: TokenPair) => {
     expires,
   });
 };
+
+export const clearCookieLocal = () => {
+  cookies().set({
+    name: AUTHENTICATION_COOKIE,
+    value: "",
+    expires: new Date(0),
+  });
+};

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -23,6 +23,7 @@ import {
   Button,
   user,
   Textarea,
+  Spinner,
 } from "@nextui-org/react";
 import {
   Form,
@@ -43,8 +44,19 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
-import { ToastError } from "@/app/common/util/toast";
+import {
+  ToastError,
+  ToastSuccess,
+  ToastWarning,
+} from "@/app/common/util/toast";
 import { TaskStatus } from "@/app/common/type/task-status.type";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Task {
   id: string;
@@ -85,6 +97,7 @@ const addTaskSchema = z.object({
   }, "Due date must be in the future"),
   userId: z.string().optional(),
 });
+
 const today = new Date();
 
 export default function RoomDetail() {
@@ -102,6 +115,7 @@ export default function RoomDetail() {
     onOpenChange: onOpenChangeAddTask,
     onClose: onCloseAddTask,
   } = useDisclosure();
+
   const addTaskForm = useForm<z.infer<typeof addTaskSchema>>({
     resolver: zodResolver(addTaskSchema),
     defaultValues: {
@@ -111,6 +125,7 @@ export default function RoomDetail() {
       userId: "",
     },
   });
+
   const [members, setMembers] = useState<Member[]>([]);
 
   useEffect(() => {
@@ -158,14 +173,13 @@ export default function RoomDetail() {
   };
   const loadRoomTasks = async (filterUserId?: string) => {
     try {
-      const res = await axiosPrivate.get<MemberListResponse>(
-        "/task/room/" + id,
-        {
-          params: {
-            userId: filterUserId || "",
-          },
-        }
-      );
+      const res = await axiosPrivate.get<{
+        data: Task[];
+      }>("/task/room/" + id, {
+        params: {
+          userId: filterUserId || "",
+        },
+      });
       // console.log(res.data);
 
       setRoomTaskList(res.data.data);
@@ -181,13 +195,42 @@ export default function RoomDetail() {
     console.log("Edit task:", task);
   };
 
-  const updateStatus = async (task) => {
+  const updateStatus = async (e: any) => {
     try {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+
+      // Get form values
+      const taskId = formData.get("taskId");
+      const status = formData.get("status") as TaskStatus;
+      if (!taskId || !status) {
+        console.error("Invalid form data");
+        return;
+      }
+      const isSameStatus = roomTaskList.find(
+        (task) => task.id === taskId && task.status === status
+      );
+      if (isSameStatus) {
+        ToastWarning("Task status is already " + status);
+        return;
+      }
       // api call to update task status
-      // const updatedTask = await updateTaskStatus(task.id, task.isComplete);
-      // setRoomTaskList((prevTasks) =>
-      //   prevTasks.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-      // );
+      await axiosPrivate.patch("/task/update-status", {
+        taskId,
+        status,
+      });
+      ToastSuccess("Task status updated to " + status);
+      setRoomTaskList(
+        roomTaskList.map((task) => {
+          if (task.id === taskId) {
+            return {
+              ...task,
+              status: status,
+            };
+          }
+          return task;
+        })
+      );
     } catch (err) {
       console.error("Failed to update task status:", err);
     }
@@ -207,10 +250,16 @@ export default function RoomDetail() {
       // fetchRooms();
 
       onCloseAddTask();
+      addTaskForm.reset();
       await loadRoomTasks();
+      ToastSuccess("Task added");
     } catch (error) {
       ToastError("Create room failed");
     }
+  }
+
+  if (loading) {
+    return <Spinner />;
   }
 
   if (!roomDetail) {
@@ -228,226 +277,226 @@ export default function RoomDetail() {
   }
 
   return (
-    <div className="mt-10 flex justify-center">
-      <div className="container">
-        <div className="mb-4 flex justify-between border rounded-md p-4 shadow-sm">
-          <div className="flex justify-start gap-2">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    href="/rooms"
-                    passHref
-                    className="h-full flex justify-center rounded-sm w-8 items-center bg-slate-100 hover:bg-slate-200 cursor-pointer"
-                  >
-                    <ChevronLeft size={25} />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Back to rooms</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold ">
-                Group {roomDetail.roomName}
-              </span>
-              <span>{roomDetail.roomDescription}</span>
-              <div className="flex items-center gap-1 text-lg px-3 py-1 bg-slate-100 rounded-sm">
-                <Star className="text-yellow-500" />
-                {roomDetail.owner.fullName}
-              </div>
+    <div className="min-h-screen">
+      <div className="mb-4 flex justify-between border rounded-md p-4 shadow-sm">
+        <div className="flex justify-start gap-2">
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/rooms"
+                  passHref
+                  className="h-full flex justify-center rounded-sm w-8 items-center bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                >
+                  <ChevronLeft size={25} />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Back to rooms</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <div className="flex flex-col">
+            <span className="text-2xl font-bold ">
+              Group {roomDetail.roomName}
+            </span>
+            <span>{roomDetail.roomDescription}</span>
+            <div className="flex items-center gap-1 text-lg px-3 py-1 bg-slate-100 rounded-sm">
+              <Star className="text-yellow-500" />
+              {roomDetail.owner.fullName}
             </div>
           </div>
-          <div className="flex flex-col justify-between">
-            {roomDetail.owner.id === user?.sub && (
-              <Button
-                onPress={onOpenAddTask}
-                className="bg-blue-500 text-white hover:bg-blue-600"
-              >
-                Add Task
-              </Button>
-            )}
+        </div>
+        <div className="flex flex-col justify-between">
+          {roomDetail.owner.id === user?.sub && (
+            <Button
+              onPress={onOpenAddTask}
+              className="bg-blue-500 text-white hover:bg-blue-600"
+            >
+              Add Task
+            </Button>
+          )}
 
-            <Modal isOpen={isOpenAddTask} onOpenChange={onOpenChangeAddTask}>
-              <ModalContent>
-                {(onClose) => (
-                  <Form {...addTaskForm}>
-                    <form
-                      onSubmit={addTaskForm.handleSubmit(onAddTask)}
-                      className="space-y-6"
-                    >
-                      <ModalHeader className="flex flex-col gap-1">
-                        Add new room
-                      </ModalHeader>
-                      <ModalBody>
-                        <FormField
-                          control={addTaskForm.control}
-                          name="title"
-                          render={({ field }) => (
+          <Modal isOpen={isOpenAddTask} onOpenChange={onOpenChangeAddTask}>
+            <ModalContent>
+              {(onClose) => (
+                <Form {...addTaskForm}>
+                  <form
+                    onSubmit={addTaskForm.handleSubmit(onAddTask)}
+                    className="space-y-6"
+                  >
+                    <ModalHeader className="flex flex-col gap-1">
+                      Add new room
+                    </ModalHeader>
+                    <ModalBody>
+                      <FormField
+                        control={addTaskForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Task title" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={addTaskForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Task description"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={addTaskForm.control}
+                        name="dueDate"
+                        render={({ field }) => {
+                          const tomorrow = new Date(today);
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          return (
                             <FormItem>
-                              <FormLabel>Title</FormLabel>
+                              <FormLabel>Due date</FormLabel>
                               <FormControl>
-                                <Input placeholder="Task title" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={addTaskForm.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  placeholder="Task description"
+                                <Input
+                                  type="date"
+                                  min={tomorrow.toISOString().split("T")[0]}
                                   {...field}
                                 />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={addTaskForm.control}
-                          name="dueDate"
-                          render={({ field }) => {
-                            const tomorrow = new Date(today);
-                            tomorrow.setDate(tomorrow.getDate() + 1);
-                            return (
-                              <FormItem>
-                                <FormLabel>Due date</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="date"
-                                    min={tomorrow.toISOString().split("T")[0]}
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            );
-                          }}
-                        />
-                        <FormField
-                          control={addTaskForm.control}
-                          name="userId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="mr-2">Assign to</FormLabel>
-                              <FormControl className="border rounded-sm">
-                                <select {...field}>
-                                  <option value="" selected>
-                                    None
+                          );
+                        }}
+                      />
+                      <FormField
+                        control={addTaskForm.control}
+                        name="userId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="mr-2">Assign to</FormLabel>
+                            <FormControl className="border rounded-sm">
+                              <select {...field}>
+                                <option value="" selected>
+                                  None
+                                </option>
+                                {members.map((member) => (
+                                  <option
+                                    key={member.user.id}
+                                    value={member.user.id}
+                                  >
+                                    {member.user.fullName}
                                   </option>
-                                  {members.map((member) => (
-                                    <option
-                                      key={member.user.id}
-                                      value={member.user.id}
-                                    >
-                                      {member.user.fullName}
-                                    </option>
-                                  ))}
-                                </select>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </ModalBody>
-                      <ModalFooter>
-                        <Button
-                          color="danger"
-                          variant="light"
-                          onPress={onCloseAddTask}
-                        >
-                          Close
-                        </Button>
-                        <Button color="primary" type="submit">
-                          Add
-                        </Button>
-                      </ModalFooter>
-                    </form>
-                  </Form>
-                )}
-              </ModalContent>
-            </Modal>
-            <Link href={`/rooms/${id}/members`} passHref>
-              <Button className="bg-green-500 text-white hover:bg-green-600">
-                Members
-              </Button>
-            </Link>
-          </div>
+                                ))}
+                              </select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </ModalBody>
+                    <ModalFooter>
+                      <Button
+                        color="danger"
+                        variant="light"
+                        onPress={onCloseAddTask}
+                      >
+                        Close
+                      </Button>
+                      <Button color="primary" type="submit">
+                        Add
+                      </Button>
+                    </ModalFooter>
+                  </form>
+                </Form>
+              )}
+            </ModalContent>
+          </Modal>
+          <Link href={`/rooms/${id}/members`} passHref>
+            <Button className="bg-green-500 text-white hover:bg-green-600">
+              Members
+            </Button>
+          </Link>
         </div>
+      </div>
 
-        {roomTaskList.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {roomTaskList.map((task, index) => (
-              <div
-                key={task.id}
-                className="border rounded-md px-5 py-2 shadow flex justify-between relative"
-              >
-                <Settings
-                  className="text-lg cursor-pointer absolute top-0 left-1"
-                  onClick={() => editTask(task)}
-                />
-                <div className="flex items-center gap-5">
-                  <span className="text-lg font-bold w-7 h-7 flex items-center justify-center rounded-full bg-blue-300">
-                    {index + 1}
-                  </span>
-                  <div className="flex flex-col">
-                    <h1 className="text-xl">{task.title}</h1>
-                    <p className="text-sm">{task.description}</p>
-                    {task.user && (
-                      <p className="flex items-center">
-                        <CircleUserRound className="text-xl text-blue-500" />
-                        <span>{task.user.fullName}</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col justify-between items-end">
-                  <p className="flex items-center">
-                    <Calendar className="text-xl text-blue-500" />
-                    <span>{new Date(task.dueDate).toLocaleDateString()}</span>
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {roomDetail.owner.id === user?.sub ||
-                    task.user.id === user?.sub ? (
-                      <>
-                        {/* <select
-                          value={task.isComplete.toString()}
-                          onChange={(value) => {
-                            task.isComplete = value.target.value === "true";
-                            setRoomTaskList([...roomTaskList]);
-                          }}
-                        >
-                          <option value="false">Not complete</option>
-                          <option value="true">Completed</option>
-                        </select> */}
-                        <Button
-                          onClick={() => updateStatus(task)}
-                          className="bg-blue-500 text-white hover:bg-blue-600"
-                        >
-                          Update
-                        </Button>
-                      </>
-                    ) : (
-                      <p className="border rounded-sm p-1 bg-slate-100 text-sm">
-                        {task.status}
-                      </p>
-                    )}
-                  </div>
+      <div className="mt-10 mb-3 text-center font-bold text-2xl">Tasks</div>
+
+      {roomTaskList.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {roomTaskList.map((task, index) => (
+            <div
+              key={task.id}
+              className="border rounded-md px-5 py-2 shadow flex justify-between relative"
+            >
+              <Settings
+                className="text-lg cursor-pointer absolute top-0 left-1"
+                onClick={() => editTask(task)}
+              />
+              <div className="flex items-center gap-5">
+                <span className="text-lg font-bold w-7 h-7 flex items-center justify-center rounded-full bg-blue-300">
+                  {index + 1}
+                </span>
+                <div className="flex flex-col">
+                  <h1 className="text-xl">{task.title}</h1>
+                  <p className="text-sm">{task.description}</p>
+                  {task.user && (
+                    <p className="flex items-center">
+                      <CircleUserRound className="text-xl text-blue-500" />
+                      <span>{task.user.fullName}</span>
+                    </p>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <h1 className="text-red-500 text-center text-lg">No tasks</h1>
-        )}
-      </div>
+              <div className="flex flex-col justify-between items-end">
+                <p className="flex items-center">
+                  <Calendar className="text-xl text-blue-500" />
+                  <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  {roomDetail.owner.id === user?.sub ||
+                  task.user.id === user?.sub ? (
+                    <form onSubmit={updateStatus} className="flex gap-2">
+                      <input
+                        type="hidden"
+                        name="taskId"
+                        value={task.id}
+                        className=""
+                      />
+                      <select name="status" defaultValue={task.status}>
+                        {Object.values(TaskStatus).map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                      <Button color="primary" size="sm" type="submit">
+                        Update
+                      </Button>
+                    </form>
+                  ) : (
+                    <p className="border rounded-sm p-1 bg-slate-100 text-sm">
+                      {task.status}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <h1 className="text-red-500 text-center text-lg">No tasks</h1>
+      )}
     </div>
   );
 }

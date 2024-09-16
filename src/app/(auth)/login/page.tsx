@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { set, useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { useAppContext } from "@/app/providers/app-provider";
 import { ToastError, ToastSuccess } from "@/app/common/util/toast";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
 
 const formSchema = z.object({
   email: z.string().min(2).max(30),
@@ -27,6 +29,7 @@ const formSchema = z.object({
 export default function Login() {
   const { login } = useAppContext();
   const router = useRouter();
+  const [loadingLogin, setLoadingLogin] = useState(false);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -38,13 +41,14 @@ export default function Login() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       console.log(values);
-
+      setLoadingLogin(true);
       await login(values.email, values.password);
+      setLoadingLogin(false);
       ToastSuccess("Login success");
       router.push("/rooms");
       router.refresh();
-    } catch (error) {
-      ToastError("Login failed");
+    } catch (error: any) {
+      ToastError(error.response.data.message);
     }
   }
 
@@ -54,7 +58,7 @@ export default function Login() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormDescription>
-              <span className="text-2xl font-bold">Login</span>
+              <p className="text-2xl font-bold text-center">Login</p>
             </FormDescription>
             <FormField
               control={form.control}
@@ -65,7 +69,7 @@ export default function Login() {
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="input email..."
+                      placeholder="Input email..."
                       {...field}
                     />
                   </FormControl>
@@ -82,7 +86,7 @@ export default function Login() {
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="input password..."
+                      placeholder="Input password..."
                       {...field}
                     />
                   </FormControl>
@@ -90,9 +94,17 @@ export default function Login() {
                 </FormItem>
               )}
             />
-            <Button type="submit">Login</Button>
+            <Button type="submit" disabled={loadingLogin} className="w-full">
+              Login
+            </Button>
           </form>
         </Form>
+        <Link
+          href="/signup"
+          className="block mt-5 w-full text-center underline cursor-pointer"
+        >
+          Sign up
+        </Link>
       </div>
     </div>
   );
