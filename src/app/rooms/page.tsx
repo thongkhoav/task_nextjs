@@ -4,15 +4,7 @@ import { useEffect, useState } from "react";
 import useAxiosPrivate from "../common/util/axios/useAxiosPrivate";
 import { useAppContext } from "../providers/app-provider";
 import Link from "next/link";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { z } from "zod";
@@ -37,6 +29,7 @@ import {
   useDisclosure,
   Button,
 } from "@nextui-org/react";
+import { useRouter } from "next/navigation";
 
 export interface Room {
   id: string;
@@ -55,6 +48,7 @@ export default function RoomsPage() {
   const { user } = useAppContext();
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
   const axiosPrivate = useAxiosPrivate();
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,6 +59,8 @@ export default function RoomsPage() {
   });
 
   useEffect(() => {
+    console.log(user);
+
     fetchRooms();
   }, []);
 
@@ -85,12 +81,21 @@ export default function RoomsPage() {
     }
   }
 
+  async function joinRoom(roomId: string) {
+    try {
+      await axiosPrivate.post(`/room/${roomId}/join`);
+      router.push(`/rooms/${roomId}/tasks`);
+    } catch (error) {
+      ToastError("Join room failed");
+    }
+  }
+
   return (
     <div className="flex justify-center">
       <div className="mt-10 min-w-[500px]">
-        <h1 className="text-3xl font-bold mb-4 flex justify-between border rounded-md p-4 shadow-sm">
-          <span>Welcome, {user?.fullName}</span>
-          <Button onPress={onOpen}>Open Modal</Button>
+        <h1 className="text-2xl font-bold mb-4 flex justify-between items-center border rounded-md p-4 shadow-sm">
+          <span>{user?.fullName}</span>
+          <Button onPress={onOpen}>Add room</Button>
           <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
             <ModalContent>
               {(onClose) => (
@@ -100,7 +105,7 @@ export default function RoomsPage() {
                     className="space-y-6"
                   >
                     <ModalHeader className="flex flex-col gap-1">
-                      Modal Title
+                      Add new room
                     </ModalHeader>
                     <ModalBody>
                       <FormField
@@ -174,7 +179,7 @@ export default function RoomsPage() {
               </div>
               {!room.isJoined && (
                 <button
-                  // onClick={() => joinRoom(room.id)}
+                  onClick={() => joinRoom(room.id)}
                   className="text-sm px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded-sm"
                 >
                   Join room

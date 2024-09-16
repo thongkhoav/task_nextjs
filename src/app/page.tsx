@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useRouter } from "next/router";
+import Link from "next/link";
 import { useEffect } from "react";
 
 export default function Home() {
@@ -8,9 +8,10 @@ export default function Home() {
     // Update the document title using the browser API
   }, []);
   return (
-    <div>
-      <h1>Home Page</h1>
-      <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
+    <div className="h-screen flex justify-center items-center">
+      <Link href="/rooms" className="py-2 px-4 rounded-sm bg-slate-200">
+        Go to room list
+      </Link>
     </div>
   );
 }

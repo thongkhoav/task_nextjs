@@ -1,6 +1,6 @@
 "use client";
 
-import { loginApi } from "@/apiRequests/auth/login.api";
+import { loginApi, TokenPair } from "@/apiRequests/auth/login.api";
 import { NextUIProvider } from "@nextui-org/react";
 import { useCallback, useContext, useEffect, useState } from "react";
 
@@ -15,7 +15,7 @@ export enum RoleType {
 }
 
 type User = {
-  id: number;
+  sub: string;
   email: string;
   fullName: string;
   role: RoleType;
@@ -23,7 +23,7 @@ type User = {
 
 const AppContext = createContext<{
   user: User | null;
-  setUser: (user: User | null) => void;
+  setUser: (user: TokenPair | null) => void;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -53,13 +53,25 @@ export default function AppProvider({
     return null;
   });
   const isAuthenticated = Boolean(user);
-  const setUser = useCallback(
-    (user: User | null) => {
-      setUserState(user);
-      localStorage.setItem("user", JSON.stringify(user));
-    },
-    [setUserState]
-  );
+
+  const setUser = useCallback((tokens: TokenPair | null) => {
+    if (tokens) {
+      localStorage.setItem("task_user", JSON.stringify(tokens));
+      const decodedToken: any = jwtDecode(tokens?.access_token);
+      if (decodedToken) {
+        const user = {
+          sub: decodedToken.sub,
+          email: decodedToken.email,
+          fullName: decodedToken.fullName,
+          role: decodedToken.role,
+        };
+        setUserState(user);
+        return;
+      }
+    }
+    localStorage.removeItem("task_user");
+    setUserState(null);
+  }, []);
   const handleLogin = async (email: string, password: string) => {
     if (!email || !password) return;
 
@@ -68,35 +80,54 @@ export default function AppProvider({
       const { data } = response;
       const decodedToken: any = jwtDecode(data?.access_token);
       if (decodedToken) {
-        const user = {
-          id: decodedToken.id,
+        const newUser = {
+          sub: decodedToken.sub,
           email: decodedToken.email,
           fullName: decodedToken.fullName,
           role: decodedToken.role,
         };
-        setUser(user);
+        localStorage.setItem("task_user", JSON.stringify(data));
+        console.log(newUser);
+
+        setUserState(newUser);
         setCookieLocal(data);
       } else {
-        setUser(null);
+        setUserState(null);
       }
     }
   };
 
   const handleLogout = async () => {
-    setUser(null);
+    setUserState(null);
     localStorage.removeItem("task_user");
   };
 
   useEffect(() => {
-    const _user = localStorage.getItem("user");
-    setUserState(_user ? JSON.parse(_user) : null);
+    const task_user = localStorage.getItem("task_user");
+    const tokens = task_user ? JSON.parse(task_user) : null;
+    if (tokens) {
+      const decodedToken: any = jwtDecode(tokens?.access_token);
+      if (decodedToken) {
+        const newUser = {
+          sub: decodedToken.sub,
+          email: decodedToken.email,
+          fullName: decodedToken.fullName,
+          role: decodedToken.role,
+        };
+        console.log(newUser);
+
+        setUserState(newUser);
+        return;
+      }
+    }
+    setUserState(null);
   }, [setUserState]);
   return (
     <ToastProvider>
       <NextUIProvider>
         <AppContext.Provider
           value={{
-            user: null,
+            user,
             setUser,
             isAuthenticated,
             login: handleLogin,
