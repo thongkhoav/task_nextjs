@@ -30,11 +30,16 @@ import {
   Button,
 } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
+import { CircleUserRound } from "lucide-react";
 
 export interface Room {
   id: string;
   name: string;
   description: string;
+  owner: {
+    id: string;
+    fullName: string;
+  };
   isJoined: boolean;
 }
 
@@ -62,7 +67,7 @@ export default function RoomsPage() {
     console.log(user);
 
     fetchRooms();
-  }, []);
+  }, [user]);
 
   const fetchRooms = async () => {
     const response = await axiosPrivate.get("/room");
@@ -174,7 +179,14 @@ export default function RoomsPage() {
               ) : (
                 <span className="text-xl font-bold">{room.name}</span>
               )}
-              <p className="text-sm">{room.description}</p>
+              <p className="flex items-center gap-2">
+                <CircleUserRound size={20} />
+                {room?.owner?.fullName}
+              </p>
+              <p className="text-sm mt-4">
+                <span className="font-bold">Description: </span>
+                {room.description}
+              </p>
             </div>
             {!room.isJoined && (
               <button

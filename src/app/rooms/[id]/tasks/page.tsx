@@ -50,13 +50,6 @@ import {
   ToastWarning,
 } from "@/app/common/util/toast";
 import { TaskStatus } from "@/app/common/type/task-status.type";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface Task {
   id: string;
@@ -98,15 +91,26 @@ const addTaskSchema = z.object({
   userId: z.string().optional(),
 });
 
+const updateTaskSchema = z.object({
+  taskId: z.string(),
+  title: z.string().min(2).max(30),
+  description: z.string().min(6).max(30),
+  dueDate: z.string().refine((value) => {
+    return new Date(value).getTime() > Date.now();
+  }, "Due date must be in the future"),
+  userId: z.string().optional(),
+});
+
 const today = new Date();
 
-export default function RoomDetail() {
+function RoomTasksPage() {
   const params = useParams<{ id: string }>();
   const { id } = params;
   const { user } = useAppContext();
   const [roomDetail, setRoomDetail] = useState<RoomDetail>();
   const [roomTaskList, setRoomTaskList] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTasks, setLoadingTasks] = useState(true);
   const [error, setError] = useState<string>();
   const axiosPrivate = useAxiosPrivate();
   const {
@@ -114,6 +118,12 @@ export default function RoomDetail() {
     onOpen: onOpenAddTask,
     onOpenChange: onOpenChangeAddTask,
     onClose: onCloseAddTask,
+  } = useDisclosure();
+  const {
+    isOpen: isOpenUpdateTask,
+    onOpen: onOpenUpdateTask,
+    onOpenChange: onOpenChangeUpdateTask,
+    onClose: onCloseUpdateTask,
   } = useDisclosure();
 
   const addTaskForm = useForm<z.infer<typeof addTaskSchema>>({
@@ -126,10 +136,22 @@ export default function RoomDetail() {
     },
   });
 
+  const updateTaskForm = useForm<z.infer<typeof updateTaskSchema>>({
+    resolver: zodResolver(updateTaskSchema),
+    defaultValues: {
+      taskId: "",
+      title: "",
+      description: "",
+      dueDate: "",
+      userId: "",
+    },
+  });
+
   const [members, setMembers] = useState<Member[]>([]);
 
   useEffect(() => {
     console.log("Room ID:", id);
+    // console.log(user);
 
     const fetchData = async () => {
       if (!id) return;
@@ -153,7 +175,7 @@ export default function RoomDetail() {
     };
 
     fetchData();
-  }, []);
+  }, [user]);
 
   const loadMembers = async () => {
     try {
@@ -173,6 +195,7 @@ export default function RoomDetail() {
   };
   const loadRoomTasks = async (filterUserId?: string) => {
     try {
+      setLoadingTasks(true);
       const res = await axiosPrivate.get<{
         data: Task[];
       }>("/task/room/" + id, {
@@ -187,13 +210,26 @@ export default function RoomDetail() {
       console.error(err);
       ToastError("Failed to load members");
     }
+    setLoadingTasks(false);
   };
 
-  const editTask = (task) => {
-    // Implement task editing logic
-    // This might open a modal or navigate to an edit page
-    console.log("Edit task:", task);
-  };
+  async function onEditTask(values: z.infer<typeof updateTaskSchema>) {
+    try {
+      console.log("editTask task:", values);
+      await axiosPrivate.patch("/task/" + values.taskId + "/update-task-info", {
+        title: values.title,
+        description: values.description,
+        dueDate: new Date(values.dueDate).toISOString(),
+        userId: values.userId,
+      });
+      await loadRoomTasks();
+      onCloseUpdateTask();
+      updateTaskForm.reset();
+      ToastSuccess("Task updated");
+    } catch (error: any) {
+      ToastError(error.response?.data?.message || "Update task failed");
+    }
+  }
 
   const updateStatus = async (e: any) => {
     try {
@@ -326,7 +362,7 @@ export default function RoomDetail() {
                     className="space-y-6"
                   >
                     <ModalHeader className="flex flex-col gap-1">
-                      Add new room
+                      Add new task
                     </ModalHeader>
                     <ModalBody>
                       <FormField
@@ -439,23 +475,146 @@ export default function RoomDetail() {
               key={task.id}
               className="border rounded-md px-5 py-2 shadow flex justify-between relative"
             >
-              <Settings
+              <button
+                onClick={() => {
+                  updateTaskForm.setValue("taskId", task.id);
+                  updateTaskForm.setValue("title", task.title);
+                  updateTaskForm.setValue("description", task.description);
+                  updateTaskForm.setValue(
+                    "dueDate",
+                    task.dueDate.split("T")[0]
+                  );
+                  updateTaskForm.setValue("userId", task.user.id);
+                  onOpenUpdateTask();
+                }}
                 className="text-lg cursor-pointer absolute top-0 left-1"
-                onClick={() => editTask(task)}
-              />
+              >
+                <Settings />
+              </button>
+              <Modal
+                isOpen={isOpenUpdateTask}
+                onOpenChange={onOpenChangeUpdateTask}
+                placement="top-center"
+              >
+                <ModalContent>
+                  {(onClose) => (
+                    <Form {...updateTaskForm}>
+                      <form
+                        onSubmit={updateTaskForm.handleSubmit(onEditTask)}
+                        className="space-y-6"
+                      >
+                        <ModalHeader className="flex flex-col gap-1">
+                          Update task
+                        </ModalHeader>
+                        <ModalBody>
+                          <FormField
+                            control={updateTaskForm.control}
+                            name="title"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Title</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Task title" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={updateTaskForm.control}
+                            name="description"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Description</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    {...field}
+                                    placeholder="Task description"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={updateTaskForm.control}
+                            name="dueDate"
+                            render={({ field }) => {
+                              const tomorrow = new Date(today);
+                              tomorrow.setDate(tomorrow.getDate() + 1);
+                              return (
+                                <FormItem>
+                                  <FormLabel>Due date</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      type="date"
+                                      min={tomorrow.toISOString().split("T")[0]}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              );
+                            }}
+                          />
+                          <FormField
+                            control={updateTaskForm.control}
+                            name="userId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="mr-2">
+                                  Assign to
+                                </FormLabel>
+                                <FormControl className="border rounded-sm">
+                                  <select {...field}>
+                                    {members.map((member) => (
+                                      <option
+                                        key={member.user.id}
+                                        value={member.user.id}
+                                      >
+                                        {member.user.fullName}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </ModalBody>
+                        <ModalFooter>
+                          <Button
+                            color="danger"
+                            variant="light"
+                            onPress={onCloseAddTask}
+                          >
+                            Close
+                          </Button>
+                          <Button color="primary" type="submit">
+                            Add
+                          </Button>
+                        </ModalFooter>
+                      </form>
+                    </Form>
+                  )}
+                </ModalContent>
+              </Modal>
               <div className="flex items-center gap-5">
                 <span className="text-lg font-bold w-7 h-7 flex items-center justify-center rounded-full bg-blue-300">
                   {index + 1}
                 </span>
                 <div className="flex flex-col">
                   <h1 className="text-xl">{task.title}</h1>
-                  <p className="text-sm">{task.description}</p>
                   {task.user && (
                     <p className="flex items-center">
                       <CircleUserRound className="text-xl text-blue-500" />
                       <span>{task.user.fullName}</span>
                     </p>
                   )}
+                  <p className="text-sm mt-4">
+                    <span className="font-bold"> Description: </span>
+                    {task.description}
+                  </p>
                 </div>
               </div>
               <div className="flex flex-col justify-between items-end">
@@ -494,9 +653,12 @@ export default function RoomDetail() {
             </div>
           ))}
         </div>
+      ) : loadingTasks ? (
+        <Spinner />
       ) : (
         <h1 className="text-red-500 text-center text-lg">No tasks</h1>
       )}
     </div>
   );
 }
+export default RoomTasksPage;

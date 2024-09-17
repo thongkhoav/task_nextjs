@@ -67,7 +67,9 @@ export default function SignUpPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormDescription>
-              <p className="text-center text-2xl font-bold">Sign up</p>
+              <span className="block text-center text-2xl font-bold">
+                Sign up
+              </span>
             </FormDescription>
             <FormField
               control={form.control}

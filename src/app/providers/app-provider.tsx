@@ -133,6 +133,8 @@ export default function AppProvider({
     const tokens = task_user ? JSON.parse(task_user) : null;
     if (tokens) {
       const decodedToken: any = jwtDecode(tokens?.access_token);
+      console.log(decodedToken);
+
       if (decodedToken) {
         const newUser = {
           sub: decodedToken.sub,
@@ -147,7 +149,7 @@ export default function AppProvider({
       }
     }
     setUserState(null);
-  }, [setUserState]);
+  }, []);
   return (
     <ToastProvider>
       <NextUIProvider>

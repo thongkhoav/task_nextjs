@@ -23,6 +23,7 @@ import {
   ModalFooter,
   useDisclosure,
   Button,
+  Spinner,
 } from "@nextui-org/react";
 import {
   Form,
@@ -55,12 +56,11 @@ interface RoomDetailResponse {
   data: RoomDetail;
 }
 
-const addTaskSchema = z.object({
-  name: z.string().min(2).max(30),
-  description: z.string().min(6).max(30),
+const addMemberSchema = z.object({
+  email: z.string().email().min(6).max(30),
 });
 
-const RoomMember = () => {
+export default function RoomMemberPage() {
   const params = useParams<{ id: string }>();
   const { id } = params;
 
@@ -70,26 +70,28 @@ const RoomMember = () => {
   const [isOwner, setIsOwner] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState(null);
   const axiosPrivate = useAxiosPrivate();
+  const [loadingRoom, setLoadingRoom] = useState(false);
   const {
-    isOpen: isOpenAddTask,
-    onOpen: onOpenAddTask,
-    onOpenChange: onOpenChangeAddTask,
-    onClose: onCloseAddTask,
+    isOpen: isOpenAddMember,
+    onOpen: onOpenAddMember,
+    onOpenChange: onOpenChangeAddMember,
+    onClose: onCloseAddMember,
   } = useDisclosure();
-  const addTaskForm = useForm<z.infer<typeof addTaskSchema>>({
-    resolver: zodResolver(addTaskSchema),
+  const addMemberForm = useForm<z.infer<typeof addMemberSchema>>({
+    resolver: zodResolver(addMemberSchema),
     defaultValues: {
-      name: "",
-      description: "",
+      email: "",
     },
   });
 
   useEffect(() => {
+    console.log(user);
+
     if (id) {
       loadMembers();
       loadRoom();
     }
-  }, [id]);
+  }, [id, user]);
 
   const loadMembers = async () => {
     try {
@@ -112,19 +114,43 @@ const RoomMember = () => {
 
   const loadRoom = async () => {
     try {
+      setLoadingRoom(true);
       const roomData = await axiosPrivate.get<RoomDetailResponse>(
         "/room/" + id
       );
       const detail = roomData.data.data;
       setRoomDetail(detail);
+      console.log({
+        user,
+        owner: detail.owner.id,
+      });
+
       setIsOwner(user?.sub === detail.owner.id);
     } catch (err) {
       console.error(err);
       ToastError("Failed to load room detail");
     }
+    setLoadingRoom(false);
   };
 
-  const addMember = () => {};
+  async function onAddMember(values: z.infer<typeof addMemberSchema>) {
+    try {
+      console.log(values);
+      if (members.find((member) => member.user.email === values.email)) {
+        ToastError("Member already joined");
+        return;
+      }
+
+      await axiosPrivate.post(`/room/${id}/add-member`, {
+        email: values.email,
+      });
+      // fetchRooms();
+      await loadMembers();
+      onCloseAddMember();
+    } catch (error: any) {
+      ToastError(error.response?.data?.message || "Failed to add member");
+    }
+  }
 
   const removeMember = (member) => {};
 
@@ -141,6 +167,10 @@ const RoomMember = () => {
     // }
   };
 
+  if (loadingRoom) {
+    return <Spinner />;
+  }
+
   if (!roomDetail) {
     return (
       <div className="text-center">
@@ -156,153 +186,142 @@ const RoomMember = () => {
   }
 
   return (
-    <div className="mt-10 flex justify-center">
-      <div className="container ">
-        <div className="mb-4 flex justify-between gap-4 border rounded-md p-4 shadow-sm">
-          <div className="flex gap-2 justify-start">
-            <TooltipProvider delayDuration={100}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    href="/rooms"
-                    passHref
-                    className="h-full flex justify-center rounded-sm w-8 items-center bg-slate-100 hover:bg-slate-200"
-                  >
-                    <ChevronLeft size={25} />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Back to rooms</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+    <div className="min-h-screen">
+      <div className="mb-4 flex justify-between gap-4 border rounded-md p-4 shadow-sm">
+        <div className="flex gap-2 justify-start">
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/rooms"
+                  passHref
+                  className="h-full flex justify-center rounded-sm w-8 items-center bg-slate-100 hover:bg-slate-200"
+                >
+                  <ChevronLeft size={25} />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Back to rooms</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold">
-                Group {roomDetail.roomName}
-              </span>
-              <span>{roomDetail.roomDescription}</span>
-              <div className="flex items-center gap-1 text-lg px-3 py-1 bg-slate-100 rounded-sm">
-                <Star size={20} color="#eab308" fill="#eab308" />
-                {roomDetail.owner.fullName}
-              </div>
+          <div className="flex flex-col">
+            <span className="text-2xl font-bold">
+              Group {roomDetail.roomName}
+            </span>
+            <span>{roomDetail.roomDescription}</span>
+            <div className="flex items-center gap-1 text-lg px-3 py-1 bg-slate-100 rounded-sm">
+              <Star size={20} color="#eab308" fill="#eab308" />
+              {roomDetail.owner.fullName}
             </div>
           </div>
-          <div className="flex flex-col justify-between">
-            {isOwner && (
-              <Button
-                onClick={addMember}
-                className="bg-green-400 text-white hover:bg-green-600"
-              >
-                Add Member
-              </Button>
-            )}
-            <Modal isOpen={isOpenAddTask} onOpenChange={onOpenChangeAddTask}>
-              <ModalContent>
-                {(onClose) => (
-                  <Form {...addTaskForm}>
-                    <form
-                      // onSubmit={addTaskForm.handleSubmit(onAddRoom)}
-                      className="space-y-6"
-                    >
-                      <ModalHeader className="flex flex-col gap-1">
-                        Add new room
-                      </ModalHeader>
-                      <ModalBody>
-                        <FormField
-                          control={addTaskForm.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Name</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="Room name"
-                                  placeholder="Input room name..."
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={addTaskForm.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="Room description"
-                                  placeholder="Input room description..."
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </ModalBody>
-                      <ModalFooter>
-                        <Button
-                          color="danger"
-                          variant="light"
-                          onPress={onClose}
-                        >
-                          Close
-                        </Button>
-                        <Button color="primary" type="submit">
-                          Add
-                        </Button>
-                      </ModalFooter>
-                    </form>
-                  </Form>
-                )}
-              </ModalContent>
-            </Modal>
-            <Link href={`/rooms/${id}/tasks`} passHref>
-              <Button className="bg-blue-400 text-white hover:bg-blue-600 w-full">
-                Tasks
-              </Button>
-            </Link>
-          </div>
         </div>
+        <div className="flex flex-col justify-between">
+          {isOwner && (
+            <Button
+              onPress={onOpenAddMember}
+              className="bg-green-400 text-white hover:bg-green-600"
+            >
+              Add Member
+            </Button>
+          )}
+          <Modal isOpen={isOpenAddMember} onOpenChange={onOpenAddMember}>
+            <ModalContent>
+              {(onClose) => (
+                <Form {...addMemberForm}>
+                  <form
+                    onSubmit={addMemberForm.handleSubmit(onAddMember)}
+                    className="space-y-6"
+                  >
+                    <ModalHeader className="flex flex-col gap-1">
+                      Add member
+                    </ModalHeader>
+                    <ModalBody>
+                      <FormField
+                        control={addMemberForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="email"
+                                placeholder="Input email..."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </ModalBody>
+                    <ModalFooter>
+                      <Button
+                        color="danger"
+                        variant="light"
+                        onPress={onCloseAddMember}
+                      >
+                        Close
+                      </Button>
+                      <Button color="primary" type="submit">
+                        Add
+                      </Button>
+                    </ModalFooter>
+                  </form>
+                </Form>
+              )}
+            </ModalContent>
+          </Modal>
+          <Link href={`/rooms/${id}/tasks`} passHref>
+            <Button
+              variant="bordered"
+              className="border-2 border-blue-400 text-blue-400 bg-white hover:border-blue-600 w-full"
+            >
+              Tasks
+            </Button>
+          </Link>
+        </div>
+      </div>
 
-        {members.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {members.map((member, index) => (
-              <div
-                key={member.user.id}
-                className="border rounded-md px-5 py-2 shadow flex justify-between items-center"
-              >
-                <div className="flex items-center gap-5">
-                  <span className="text-lg font-bold w-7 h-7 flex items-center justify-center rounded-full bg-blue-300">
-                    {index + 1}
-                  </span>
-                  <div className="flex flex-col">
-                    <h1 className="text-xl flex gap-2 items-center">
-                      {member.user.fullName}{" "}
-                      {member.isOwner && (
-                        <Star size={20} color="#eab308" fill="#eab308" />
-                      )}
-                    </h1>
-                    <p className="text-sm">{member.user.email}</p>
-                  </div>
+      {members.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {members.map((member, index) => (
+            <div
+              key={member.user.id}
+              className="border rounded-md px-5 py-2 shadow flex justify-between items-center"
+            >
+              <div className="flex items-center gap-5">
+                <span className="text-lg font-bold w-7 h-7 flex items-center justify-center rounded-full bg-blue-300">
+                  {index + 1}
+                </span>
+                <div className="flex flex-col">
+                  <h1 className="text-xl flex gap-2 items-center">
+                    {member.user.fullName}{" "}
+                    {member.isOwner && (
+                      <Star size={20} color="#eab308" fill="#eab308" />
+                    )}
+                  </h1>
+                  <p className="text-sm">{member.user.email}</p>
                 </div>
-                {roomDetail.owner.id === user?.sub && !member.isOwner && (
-                  <Button onClick={() => removeMember(member)} color="danger">
-                    Remove
-                  </Button>
-                )}
               </div>
-            ))}
-          </div>
-        ) : (
-          <h1 className="text-red-500 text-center text-lg">No members</h1>
-        )}
+              {roomDetail.owner.id === user?.sub && !member.isOwner && (
+                <Button
+                  size="sm"
+                  onClick={() => removeMember(member)}
+                  color="danger"
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <h1 className="text-red-500 text-center text-lg">No members</h1>
+      )}
 
-        {/* <AddMemberModal
+      {/* <AddMemberModal
         isOpen={isAddMemberModalOpen}
         onClose={() => setIsAddMemberModalOpen(false)}
         roomId={roomId}
@@ -315,9 +334,6 @@ const RoomMember = () => {
         memberName={memberToRemove?.name}
         onConfirm={handleRemoveMember}
       /> */}
-      </div>
     </div>
   );
-};
-
-export default RoomMember;
+}

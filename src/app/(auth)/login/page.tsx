@@ -43,13 +43,13 @@ export default function Login() {
       console.log(values);
       setLoadingLogin(true);
       await login(values.email, values.password);
-      setLoadingLogin(false);
       ToastSuccess("Login success");
       router.push("/rooms");
       router.refresh();
     } catch (error: any) {
       ToastError(error.response.data.message);
     }
+    setLoadingLogin(false);
   }
 
   return (
@@ -58,7 +58,9 @@ export default function Login() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormDescription>
-              <p className="text-2xl font-bold text-center">Login</p>
+              <span className="block text-2xl font-bold text-center">
+                Login
+              </span>
             </FormDescription>
             <FormField
               control={form.control}
