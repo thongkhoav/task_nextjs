@@ -9,6 +9,8 @@ import {
   Calendar,
   ChevronLeft,
   CircleChevronLeft,
+  Copy,
+  Crown,
 } from "lucide-react";
 import { useAppContext } from "@/app/providers/app-provider";
 import { RoomDetail } from "@/apiRequests/room/room-detail.type";
@@ -50,6 +52,7 @@ import {
   ToastWarning,
 } from "@/app/common/util/toast";
 import { TaskStatus } from "@/app/common/type/task-status.type";
+import { Style } from "@/app/common/util/style";
 
 interface Task {
   id: string;
@@ -160,7 +163,7 @@ function RoomTasksPage() {
         const roomData = await axiosPrivate.get<RoomDetailResponse>(
           "/room/" + id
         );
-        // console.log("Room data:", roomData.data.data);
+        console.log("Room data:", roomData.data.data);
 
         setRoomDetail(roomData.data.data);
         // setRoomTaskList(tasksData);
@@ -176,6 +179,20 @@ function RoomTasksPage() {
 
     fetchData();
   }, [user]);
+
+  const handleCopyInviteCode = async () => {
+    if (!roomDetail?.inviteLink) {
+      console.error("Invite code not found");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(roomDetail?.inviteLink);
+      ToastSuccess("Invite code copied");
+    } catch (err) {
+      console.error(err);
+      ToastError("Failed to copy invite code");
+    }
+  };
 
   const loadMembers = async () => {
     try {
@@ -332,15 +349,24 @@ function RoomTasksPage() {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-2">
             <span className="text-2xl font-bold ">
               Group {roomDetail.roomName}
             </span>
             <span>{roomDetail.roomDescription}</span>
             <div className="flex items-center gap-1 text-lg px-3 py-1 bg-slate-100 rounded-sm">
-              <Star className="text-yellow-500" />
+              <Crown size={20} color={Style.CROWN} />
               {roomDetail.owner.fullName}
             </div>
+            <p className="flex items-center text-sm gap-2">
+              <span>Copy invite code</span>
+              <span
+                className="hover:opacity-50 hover:cursor-pointer"
+                onClick={handleCopyInviteCode}
+              >
+                <Copy size={20} />
+              </span>
+            </p>
           </div>
         </div>
         <div className="flex flex-col justify-between">
@@ -475,22 +501,24 @@ function RoomTasksPage() {
               key={task.id}
               className="border rounded-md px-5 py-2 shadow flex justify-between relative"
             >
-              <button
-                onClick={() => {
-                  updateTaskForm.setValue("taskId", task.id);
-                  updateTaskForm.setValue("title", task.title);
-                  updateTaskForm.setValue("description", task.description);
-                  updateTaskForm.setValue(
-                    "dueDate",
-                    task.dueDate.split("T")[0]
-                  );
-                  updateTaskForm.setValue("userId", task.user.id);
-                  onOpenUpdateTask();
-                }}
-                className="text-lg cursor-pointer absolute top-0 left-1"
-              >
-                <Settings />
-              </button>
+              {user?.sub === roomDetail?.owner?.id && (
+                <button
+                  onClick={() => {
+                    updateTaskForm.setValue("taskId", task.id);
+                    updateTaskForm.setValue("title", task.title);
+                    updateTaskForm.setValue("description", task.description);
+                    updateTaskForm.setValue(
+                      "dueDate",
+                      task.dueDate.split("T")[0]
+                    );
+                    updateTaskForm.setValue("userId", task.user.id);
+                    onOpenUpdateTask();
+                  }}
+                  className="text-lg cursor-pointer absolute top-0 left-1"
+                >
+                  <Settings />
+                </button>
+              )}
               <Modal
                 isOpen={isOpenUpdateTask}
                 onOpenChange={onOpenChangeUpdateTask}
@@ -605,12 +633,25 @@ function RoomTasksPage() {
                 </span>
                 <div className="flex flex-col">
                   <h1 className="text-xl">{task.title}</h1>
-                  {task.user && (
-                    <p className="flex items-center">
-                      <CircleUserRound className="text-xl text-blue-500" />
-                      <span>{task.user.fullName}</span>
-                    </p>
-                  )}
+                  <p className="flex items-center gap-2">
+                    {task.user ? (
+                      <>
+                        <CircleUserRound
+                          size={20}
+                          className="text-xl text-blue-500"
+                        />
+                        <span>{task.user.fullName}</span>
+                      </>
+                    ) : (
+                      <>
+                        <CircleUserRound
+                          size={20}
+                          className="text-xl text-red-500"
+                        />
+                        <span className="text-red-500">Unassigned</span>
+                      </>
+                    )}
+                  </p>
                   <p className="text-sm mt-4">
                     <span className="font-bold"> Description: </span>
                     {task.description}
@@ -623,8 +664,8 @@ function RoomTasksPage() {
                   <span>{new Date(task.dueDate).toLocaleDateString()}</span>
                 </p>
                 <div className="flex items-center gap-2">
-                  {roomDetail.owner.id === user?.sub ||
-                  task.user.id === user?.sub ? (
+                  {roomDetail?.owner?.id === user?.sub ||
+                  task?.user?.id === user?.sub ? (
                     <form onSubmit={updateStatus} className="flex gap-2">
                       <input
                         type="hidden"

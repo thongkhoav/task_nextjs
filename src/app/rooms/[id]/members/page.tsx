@@ -4,11 +4,17 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Dialog } from "@/components/ui/dialog";
 
-import { ToastError } from "@/app/common/util/toast";
+import { ToastError, ToastSuccess } from "@/app/common/util/toast";
 import { useAppContext } from "@/app/providers/app-provider";
 import { RoomDetail } from "@/apiRequests/room/room-detail.type";
 import useAxiosPrivate from "@/app/common/util/axios/useAxiosPrivate";
-import { ChevronLeft, CircleChevronLeft, Star } from "lucide-react";
+import {
+  ChevronLeft,
+  CircleChevronLeft,
+  Copy,
+  Crown,
+  Star,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -38,6 +44,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
+import { Style } from "@/app/common/util/style";
 
 interface MemberListResponse {
   data: Member[];
@@ -70,7 +77,7 @@ export default function RoomMemberPage() {
   const [isOwner, setIsOwner] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState(null);
   const axiosPrivate = useAxiosPrivate();
-  const [loadingRoom, setLoadingRoom] = useState(false);
+  const [loadingRoom, setLoadingRoom] = useState(true);
   const {
     isOpen: isOpenAddMember,
     onOpen: onOpenAddMember,
@@ -167,6 +174,20 @@ export default function RoomMemberPage() {
     // }
   };
 
+  const handleCopyInviteCode = async () => {
+    if (!roomDetail?.inviteLink) {
+      console.error("Invite code not found");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(roomDetail?.inviteLink);
+      ToastSuccess("Invite code copied");
+    } catch (err) {
+      console.error(err);
+      ToastError("Failed to copy invite code");
+    }
+  };
+
   if (loadingRoom) {
     return <Spinner />;
   }
@@ -206,15 +227,24 @@ export default function RoomMemberPage() {
             </Tooltip>
           </TooltipProvider>
 
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-2">
             <span className="text-2xl font-bold">
               Group {roomDetail.roomName}
             </span>
             <span>{roomDetail.roomDescription}</span>
             <div className="flex items-center gap-1 text-lg px-3 py-1 bg-slate-100 rounded-sm">
-              <Star size={20} color="#eab308" fill="#eab308" />
+              <Crown size={20} color={Style.CROWN} />
               {roomDetail.owner.fullName}
             </div>
+            <p className="flex items-center text-sm gap-2">
+              <span>Copy invite code</span>
+              <span
+                className="hover:opacity-50 hover:cursor-pointer"
+                onClick={handleCopyInviteCode}
+              >
+                <Copy size={20} />
+              </span>
+            </p>
           </div>
         </div>
         <div className="flex flex-col justify-between">
