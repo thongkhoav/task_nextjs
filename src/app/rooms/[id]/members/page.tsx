@@ -401,20 +401,6 @@ export default function RoomMemberPage() {
       ) : (
         <h1 className="text-red-500 text-center text-lg">No members</h1>
       )}
-
-      {/* <AddMemberModal
-        isOpen={isAddMemberModalOpen}
-        onClose={() => setIsAddMemberModalOpen(false)}
-        roomId={roomId}
-        onMemberAdded={loadMembers}
-      />
-
-      <ConfirmRemoveModal
-        isOpen={isConfirmRemoveModalOpen}
-        onClose={() => setIsConfirmRemoveModalOpen(false)}
-        memberName={memberToRemove?.name}
-        onConfirm={handleRemoveMember}
-      /> */}
     </div>
   );
 }

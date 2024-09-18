@@ -16,6 +16,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@nextui-org/react";
+import Link from "next/link";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type Notification = {
   id: string;
@@ -27,8 +34,10 @@ type Notification = {
 
 const NotificationContext = createContext<{
   notifications: Notification[];
+  markNotificationAsRead?: (notificationId: string, isReadAll: boolean) => void;
 }>({
   notifications: [],
+  markNotificationAsRead: () => {},
 });
 
 export const useNotificationContext = () => {
@@ -49,7 +58,7 @@ export default function NotificationProvider({
     const savedNotifications = await axiosPrivate.get(`/notification`, {
       params: {
         page: 1,
-        pageSize: 10,
+        pageSize: 100,
       },
     });
     setNotifications(savedNotifications?.data?.data);
@@ -88,7 +97,7 @@ export default function NotificationProvider({
             {
               params: {
                 page: 1,
-                pageSize: 10,
+                pageSize: 100,
               },
             }
           );
@@ -119,7 +128,7 @@ export default function NotificationProvider({
       const savedNotifications = await axiosPrivate.get(`/notification`, {
         params: {
           page: 1,
-          pageSize: 10,
+          pageSize: 100,
         },
       });
       setNotifications(savedNotifications?.data?.data);
@@ -136,13 +145,26 @@ export default function NotificationProvider({
   }, [user]);
 
   return (
-    <NotificationContext.Provider value={{ notifications }}>
+    <NotificationContext.Provider
+      value={{ notifications, markNotificationAsRead: markNotificationAsRead }}
+    >
       {user && (
         <div className="w-full flex justify-center mt-5">
           <div className="flex justify-between gap-5 px-5 min-w-80 py-2 bg-slate-200 rounded-md">
-            <div className="text-lg font-bold flex items-center gap-1">
-              Notifcations
-            </div>
+            <Link
+              href="/notifications"
+              className="text-lg font-bold flex items-center gap-1 cursor-pointer"
+              passHref
+            >
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p>Notifications</p>
+                  </TooltipTrigger>
+                  <TooltipContent>View more</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Link>
             {notifications.length > 0 && (
               <Popover placement="right">
                 <Badge
