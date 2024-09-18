@@ -207,7 +207,7 @@ export default function RoomMemberPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="">
       <div className="mb-4 flex justify-between gap-4 border rounded-md p-4 shadow-sm">
         <div className="flex gap-2 justify-start">
           <TooltipProvider delayDuration={100}>

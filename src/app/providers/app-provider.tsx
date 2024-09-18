@@ -9,7 +9,7 @@ import { jwtDecode } from "jwt-decode";
 import ToastProvider from "./toast-provider";
 import { clearCookieLocal, setCookieLocal } from "../common/util/cookie-action";
 import useAxiosPrivate from "../common/util/axios/useAxiosPrivate";
-import { ToastError, ToastSuccess } from "../common/util/toast";
+import { ToastError, ToastInfo, ToastSuccess } from "../common/util/toast";
 import { CircleUserRound, LogOut, UserRound } from "lucide-react";
 import {
   Tooltip,
@@ -18,6 +18,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
+import { firebaseCloudMessaging } from "../config/firebase";
+import { getMessaging, onMessage } from "firebase/messaging";
+import { NotificationContent } from "../config/noti-toast-element";
+import { log } from "console";
+import NotificationProvider from "./notification-provider";
 
 export enum RoleType {
   ADMIN = "ADMIN",
@@ -33,12 +38,14 @@ type User = {
 
 const AppContext = createContext<{
   user: User | null;
+  tokens: TokenPair | null;
   setUser: (user: TokenPair | null) => void;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }>({
   user: null,
+  tokens: null,
   setUser: () => {},
   isAuthenticated: false,
   login: async () => {},
@@ -62,6 +69,7 @@ export default function AppProvider({
     // }
     return null;
   });
+  const [tokens, setTokens] = useState<TokenPair | null>(null);
   const isAuthenticated = Boolean(user);
   const axiosPrivate = useAxiosPrivate();
   const router = useRouter();
@@ -101,6 +109,7 @@ export default function AppProvider({
         localStorage.setItem("task_user", JSON.stringify(data));
         console.log(newUser);
 
+        setTokens(data);
         setUserState(newUser);
         setCookieLocal(data);
       } else {
@@ -118,6 +127,9 @@ export default function AppProvider({
         setUserState(null);
         localStorage.removeItem("task_user");
         clearCookieLocal();
+
+        await firebaseCloudMessaging.deleteToken();
+
         ToastSuccess("Sign out success");
         router.push("/login");
         router.refresh();
@@ -129,6 +141,16 @@ export default function AppProvider({
   };
 
   useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+    // if ("serviceWorker" in navigator) {
+    //   navigator.serviceWorker.addEventListener("message", (event) =>
+    //     console.log("event for the service worker", event)
+    //   );
+    // }
+
     const task_user = localStorage.getItem("task_user");
     const tokens = task_user ? JSON.parse(task_user) : null;
     if (tokens) {
@@ -145,17 +167,21 @@ export default function AppProvider({
         console.log(newUser);
 
         setUserState(newUser);
+        setTokens(tokens);
+
         return;
       }
     }
     setUserState(null);
   }, []);
+
   return (
     <ToastProvider>
       <NextUIProvider>
         <AppContext.Provider
           value={{
             user,
+            tokens,
             setUser,
             isAuthenticated,
             login: handleLogin,
@@ -184,7 +210,7 @@ export default function AppProvider({
               </div>
             </div>
           )}
-          {children}
+          <NotificationProvider>{children}</NotificationProvider>
         </AppContext.Provider>
       </NextUIProvider>
     </ToastProvider>

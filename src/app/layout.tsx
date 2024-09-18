@@ -15,9 +15,9 @@ export default async function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} min-h-screen w-full`}>
+      <body className={`${inter.className} w-full`}>
         <AppProvider>
-          <div className="mt-10 flex justify-center">
+          <div className="mt-10 flex justify-center items-start ">
             <div className="container flex justify-center">{children}</div>
           </div>
         </AppProvider>

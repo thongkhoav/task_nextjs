@@ -4,7 +4,7 @@ export default function RoomLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex flex-col justify-center min-h-screen  w-full max-w-[2000px]">
+    <div className="flex flex-col justify-center   w-full max-w-[2000px]">
       {children}
     </div>
   );

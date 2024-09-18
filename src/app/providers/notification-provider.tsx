@@ -1,0 +1,209 @@
+"use client";
+import { use, useContext, useEffect, useState } from "react";
+import useAxiosPrivate from "../common/util/axios/useAxiosPrivate";
+import { createContext } from "react";
+import { useAppContext } from "./app-provider";
+import { firebaseCloudMessaging } from "../config/firebase";
+import * as firebase from "firebase/app";
+import { getMessaging, onMessage } from "firebase/messaging";
+import { ToastInfo } from "../common/util/toast";
+import { NotificationContent } from "../config/noti-toast-element";
+import { Bell } from "lucide-react";
+import moment from "moment";
+import {
+  Badge,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@nextui-org/react";
+
+type Notification = {
+  id: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+};
+
+const NotificationContext = createContext<{
+  notifications: Notification[];
+}>({
+  notifications: [],
+});
+
+export const useNotificationContext = () => {
+  const context = useContext(NotificationContext);
+  return context;
+};
+
+export default function NotificationProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const axiosPrivate = useAxiosPrivate();
+  const { user, tokens } = useAppContext();
+  const setUpFirebaseMessaging = async () => {
+    if (!user?.sub || !tokens?.refresh_token) return;
+    const savedNotifications = await axiosPrivate.get(`/notification`, {
+      params: {
+        page: 1,
+        pageSize: 10,
+      },
+    });
+    setNotifications(savedNotifications?.data?.data);
+    console.log("Saved Notifications:", savedNotifications?.data?.data);
+
+    firebaseCloudMessaging
+      .init()
+      .then(async (token) => {
+        console.log("FCM Token:", token);
+        // Send this token to your server if needed
+
+        await axiosPrivate.patch("/notification/update-fcm-token", {
+          fcmToken: token,
+          userId: user?.sub,
+          refreshToken: tokens?.refresh_token,
+        });
+        console.log("FCM Token sent to server");
+      })
+      .catch((error) => {
+        console.error("Failed to initialize FCM:", error);
+      });
+
+    if (firebase.getApps().length > 0) {
+      try {
+        const messaging = getMessaging();
+        onMessage(messaging, async (payload) => {
+          console.log("Message Received", payload);
+          const { title, body } = payload?.notification;
+          if (title && body) {
+            payload?.notification?.body &&
+              ToastInfo(NotificationContent(title, body));
+          }
+
+          const savedNotifications = await axiosPrivate.get(
+            `/notification/${user?.sub}`,
+            {
+              params: {
+                page: 1,
+                pageSize: 10,
+              },
+            }
+          );
+          setNotifications(savedNotifications?.data?.data);
+          console.log("Saved Notifications:", savedNotifications?.data?.data);
+        });
+      } catch (error) {
+        console.error(error);
+        return null;
+      }
+    }
+  };
+
+  const markNotificationAsRead = async (
+    notificationId: string,
+    isReadAll: boolean = false
+  ) => {
+    try {
+      console.log("read noti", {
+        notificationId,
+        isReadAll,
+      });
+
+      await axiosPrivate.patch("/notification/mark-as-read", {
+        notificationId,
+        isReadAll,
+      });
+      const savedNotifications = await axiosPrivate.get(`/notification`, {
+        params: {
+          page: 1,
+          pageSize: 10,
+        },
+      });
+      setNotifications(savedNotifications?.data?.data);
+      console.log("Saved Notifications:", savedNotifications?.data?.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    console.log("User in noti:", user);
+
+    setUpFirebaseMessaging();
+  }, [user]);
+
+  return (
+    <NotificationContext.Provider value={{ notifications }}>
+      {user && notifications?.length > 0 && (
+        <div className="w-full flex justify-center mt-5">
+          <div className="flex justify-between gap-5 px-5 min-w-80 py-2 bg-slate-200 rounded-md">
+            <div className="text-lg font-bold flex items-center gap-1">
+              Notifcations
+            </div>
+            <Popover placement="right">
+              <Badge
+                content={
+                  notifications.filter((notification) => !notification.isRead)
+                    .length
+                }
+                color="danger"
+              >
+                <PopoverTrigger>
+                  <Bell size={25} className="cursor-pointer hover:opacity-85" />
+                </PopoverTrigger>
+              </Badge>
+              <PopoverContent>
+                <div>
+                  <p className="flex justify-end mb-2">
+                    <span
+                      className="text-sm font-bold cursor-pointer"
+                      onClick={() => {
+                        markNotificationAsRead("", true);
+                      }}
+                    >
+                      Mark all as read
+                    </span>
+                  </p>
+                  <div className="flex flex-col min-w-72 py-2">
+                    {notifications.map((notification, index) => (
+                      <div key={notification.id}>
+                        <div
+                          className={`flex justify-between gap-5 ${
+                            !notification?.isRead &&
+                            "bg-gray-100 hover:bg-white"
+                          } cursor-pointer`}
+                          onClick={() => {
+                            if (!notification.isRead) {
+                              markNotificationAsRead(notification.id, false);
+                            }
+                          }}
+                        >
+                          <div className="flex flex-col gap-2">
+                            <div className="text-lg font-bold">
+                              {notification.title}
+                            </div>
+                            <div className="text-sm">{notification.body}</div>
+                          </div>
+                          <div className="text-sm">
+                            {moment(new Date(notification.createdAt)).fromNow()}
+                          </div>
+                        </div>
+                        {index < notifications.length - 1 && (
+                          <div className="h-[2px] bg-gray-300" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+      )}
+      {children}
+    </NotificationContext.Provider>
+  );
+}

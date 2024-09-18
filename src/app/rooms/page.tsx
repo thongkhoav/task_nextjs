@@ -134,7 +134,7 @@ export default function RoomsPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="">
       <h1 className="text-2xl font-bold mb-4 flex justify-between items-center border rounded-md p-4 shadow-sm">
         <Modal isOpen={isOpenJoinRoom} onOpenChange={onOpenChangeJoinRoom}>
           <ModalContent>

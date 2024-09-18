@@ -330,7 +330,7 @@ function RoomTasksPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="">
       <div className="mb-4 flex justify-between border rounded-md p-4 shadow-sm">
         <div className="flex justify-start gap-2">
           <TooltipProvider delayDuration={100}>
