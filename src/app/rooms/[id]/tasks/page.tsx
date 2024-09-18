@@ -11,6 +11,7 @@ import {
   CircleChevronLeft,
   Copy,
   Crown,
+  RefreshCcw,
 } from "lucide-react";
 import { useAppContext } from "@/app/providers/app-provider";
 import { RoomDetail } from "@/apiRequests/room/room-detail.type";
@@ -108,13 +109,13 @@ const today = new Date();
 
 function RoomTasksPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const { id } = params;
   const { user } = useAppContext();
   const [roomDetail, setRoomDetail] = useState<RoomDetail>();
   const [roomTaskList, setRoomTaskList] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(true);
-  const [error, setError] = useState<string>();
   const axiosPrivate = useAxiosPrivate();
   const {
     isOpen: isOpenAddTask,
@@ -169,9 +170,10 @@ function RoomTasksPage() {
         // setRoomTaskList(tasksData);
         loadMembers();
         loadRoomTasks();
-      } catch (err) {
-        setError("Failed to fetch room data");
+      } catch (err: any) {
         console.error(err);
+        ToastError(err.response?.data?.message || "Failed to fetch room data");
+        router.push("/rooms");
       } finally {
         setLoading(false);
       }
@@ -492,7 +494,15 @@ function RoomTasksPage() {
         </div>
       </div>
 
-      <div className="mt-10 mb-3 text-center font-bold text-2xl">Tasks</div>
+      <div className="mt-10 mb-3 text-center font-bold text-2xl relative">
+        Tasks
+        <span
+          className="absolute right-0 cursor-pointer hover:opacity-60"
+          onClick={() => loadRoomTasks()}
+        >
+          <RefreshCcw />
+        </span>
+      </div>
 
       {roomTaskList.length > 0 ? (
         <div className="flex flex-col gap-2">

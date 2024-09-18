@@ -137,69 +137,79 @@ export default function NotificationProvider({
 
   return (
     <NotificationContext.Provider value={{ notifications }}>
-      {user && notifications?.length > 0 && (
+      {user && (
         <div className="w-full flex justify-center mt-5">
           <div className="flex justify-between gap-5 px-5 min-w-80 py-2 bg-slate-200 rounded-md">
             <div className="text-lg font-bold flex items-center gap-1">
               Notifcations
             </div>
-            <Popover placement="right">
-              <Badge
-                content={
-                  notifications.filter((notification) => !notification.isRead)
-                    .length
-                }
-                color="danger"
-              >
-                <PopoverTrigger>
-                  <Bell size={25} className="cursor-pointer hover:opacity-85" />
-                </PopoverTrigger>
-              </Badge>
-              <PopoverContent>
-                <div>
-                  <p className="flex justify-end mb-2">
-                    <span
-                      className="text-sm font-bold cursor-pointer"
-                      onClick={() => {
-                        markNotificationAsRead("", true);
-                      }}
-                    >
-                      Mark all as read
-                    </span>
-                  </p>
-                  <div className="flex flex-col min-w-72 py-2">
-                    {notifications.map((notification, index) => (
-                      <div key={notification.id}>
-                        <div
-                          className={`flex justify-between gap-5 ${
-                            !notification?.isRead &&
-                            "bg-gray-100 hover:bg-white"
-                          } cursor-pointer`}
+            {notifications.length > 0 && (
+              <Popover placement="right">
+                <Badge
+                  content={
+                    notifications.filter((notification) => !notification.isRead)
+                      .length
+                  }
+                  color="danger"
+                >
+                  <PopoverTrigger>
+                    <Bell
+                      size={25}
+                      className="cursor-pointer hover:opacity-85"
+                    />
+                  </PopoverTrigger>
+                </Badge>
+                <PopoverContent>
+                  <div>
+                    {notifications.filter((noti) => !noti?.isRead).length >
+                      0 && (
+                      <p className="flex justify-end mb-2">
+                        <span
+                          className="text-sm font-bold cursor-pointer"
                           onClick={() => {
-                            if (!notification.isRead) {
-                              markNotificationAsRead(notification.id, false);
-                            }
+                            markNotificationAsRead("", true);
                           }}
                         >
-                          <div className="flex flex-col gap-2">
-                            <div className="text-lg font-bold">
-                              {notification.title}
+                          Mark all as read
+                        </span>
+                      </p>
+                    )}
+                    <div className="flex flex-col min-w-72 max-w-[400px] py-2">
+                      {notifications.map((notification, index) => (
+                        <div key={notification.id}>
+                          <div
+                            className={`flex justify-between gap-5 ${
+                              !notification?.isRead &&
+                              "bg-gray-100 hover:bg-white"
+                            } cursor-pointer`}
+                            onClick={() => {
+                              if (!notification.isRead) {
+                                markNotificationAsRead(notification.id, false);
+                              }
+                            }}
+                          >
+                            <div className="flex flex-col gap-2">
+                              <div className="text-base font-bold line-clamp-2">
+                                {notification.title}
+                              </div>
+                              <div className="text-sm">{notification.body}</div>
                             </div>
-                            <div className="text-sm">{notification.body}</div>
+                            <div className="text-sm line-clamp-2">
+                              {moment(
+                                new Date(notification.createdAt)
+                              ).fromNow()}
+                            </div>
                           </div>
-                          <div className="text-sm">
-                            {moment(new Date(notification.createdAt)).fromNow()}
-                          </div>
+                          {index < notifications.length - 1 && (
+                            <div className="h-[2px] bg-gray-300" />
+                          )}
                         </div>
-                        {index < notifications.length - 1 && (
-                          <div className="h-[2px] bg-gray-300" />
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
         </div>
       )}

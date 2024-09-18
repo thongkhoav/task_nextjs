@@ -17,7 +17,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
+import { set, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ToastError, ToastSuccess } from "../common/util/toast";
 import {
@@ -28,6 +28,7 @@ import {
   ModalFooter,
   useDisclosure,
   Button,
+  Spinner,
 } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import { CircleUserRound, Crown } from "lucide-react";
@@ -72,6 +73,7 @@ export default function RoomsPage() {
   } = useDisclosure();
   const axiosPrivate = useAxiosPrivate();
   const router = useRouter();
+  const [loadingRooms, setLoadingRooms] = useState(true);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -95,10 +97,12 @@ export default function RoomsPage() {
   }, [user]);
 
   const fetchRooms = async () => {
+    setLoadingRooms(true);
     const response = await axiosPrivate.get("/room");
     console.log(response.data.data);
 
     setRooms(response.data.data);
+    setLoadingRooms(false);
   };
 
   async function onAddRoom(values: z.infer<typeof formSchema>) {
@@ -133,10 +137,26 @@ export default function RoomsPage() {
     }
   }
 
+  if (loadingRooms) {
+    return <Spinner />;
+  }
+
+  if (rooms?.length === 0) {
+    return (
+      <div className="text-center">
+        <h1 className="text-red-500 text-lg">Not join any rooms</h1>
+      </div>
+    );
+  }
+
   return (
     <div className="">
       <h1 className="text-2xl font-bold mb-4 flex justify-between items-center border rounded-md p-4 shadow-sm">
-        <Modal isOpen={isOpenJoinRoom} onOpenChange={onOpenChangeJoinRoom}>
+        <Modal
+          isOpen={isOpenJoinRoom}
+          onOpenChange={onOpenChangeJoinRoom}
+          placement="center"
+        >
           <ModalContent>
             {(onClose) => (
               <Form {...joinRoomForm}>

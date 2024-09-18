@@ -13,6 +13,7 @@ import {
   CircleChevronLeft,
   Copy,
   Crown,
+  RefreshCcw,
   Star,
 } from "lucide-react";
 import {
@@ -30,6 +31,9 @@ import {
   useDisclosure,
   Button,
   Spinner,
+  PopoverTrigger,
+  Popover,
+  PopoverContent,
 } from "@nextui-org/react";
 import {
   Form,
@@ -70,12 +74,11 @@ const addMemberSchema = z.object({
 export default function RoomMemberPage() {
   const params = useParams<{ id: string }>();
   const { id } = params;
-
+  const router = useRouter();
   const [roomDetail, setRoomDetail] = useState<RoomDetail>();
   const { user } = useAppContext();
   const [members, setMembers] = useState<Member[]>([]);
   const [isOwner, setIsOwner] = useState(false);
-  const [memberToRemove, setMemberToRemove] = useState(null);
   const axiosPrivate = useAxiosPrivate();
   const [loadingRoom, setLoadingRoom] = useState(true);
   const {
@@ -90,6 +93,7 @@ export default function RoomMemberPage() {
       email: "",
     },
   });
+  const [isPopoverOpen, setPopoverOpen] = useState(false);
 
   useEffect(() => {
     console.log(user);
@@ -133,9 +137,10 @@ export default function RoomMemberPage() {
       });
 
       setIsOwner(user?.sub === detail.owner.id);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      ToastError("Failed to load room detail");
+      ToastError(err?.response?.data?.message || "Failed to load room");
+      router.push("/rooms");
     }
     setLoadingRoom(false);
   };
@@ -152,6 +157,7 @@ export default function RoomMemberPage() {
         email: values.email,
       });
       // fetchRooms();
+      ToastSuccess("Member added successfully");
       await loadMembers();
       onCloseAddMember();
     } catch (error: any) {
@@ -159,19 +165,24 @@ export default function RoomMemberPage() {
     }
   }
 
-  const removeMember = (member) => {};
+  const handleRemoveMember = async (member: Member) => {
+    if (!member) return;
 
-  const handleRemoveMember = async () => {
-    if (!id || !memberToRemove) return;
+    try {
+      await axiosPrivate.delete(`/room/${id}/remove-member`, {
+        data: {
+          userId: member.user.id,
+          removeAll: false,
+        },
+      });
 
-    // try {
-    //   await removeRoomMember(id, memberToRemove.id);
-    //   toast.success("Member removed successfully");
-    //   loadMembers();
-    // } catch (err) {
-    //   console.error(err);
-    //   toast.error("Failed to remove member");
-    // }
+      setPopoverOpen(false);
+      ToastSuccess("Member removed successfully");
+      loadMembers();
+    } catch (err) {
+      console.error(err);
+      ToastError("Failed to remove member");
+    }
   };
 
   const handleCopyInviteCode = async () => {
@@ -256,7 +267,11 @@ export default function RoomMemberPage() {
               Add Member
             </Button>
           )}
-          <Modal isOpen={isOpenAddMember} onOpenChange={onOpenAddMember}>
+          <Modal
+            isOpen={isOpenAddMember}
+            onOpenChange={onOpenAddMember}
+            placement="center"
+          >
             <ModalContent>
               {(onClose) => (
                 <Form {...addMemberForm}>
@@ -314,6 +329,16 @@ export default function RoomMemberPage() {
         </div>
       </div>
 
+      <div className="mt-10 mb-3 text-center font-bold text-2xl relative">
+        Members
+        <span
+          className="absolute right-0 cursor-pointer hover:opacity-60"
+          onClick={() => loadMembers()}
+        >
+          <RefreshCcw />
+        </span>
+      </div>
+
       {members.length > 0 ? (
         <div className="flex flex-col gap-2">
           {members.map((member, index) => (
@@ -336,13 +361,39 @@ export default function RoomMemberPage() {
                 </div>
               </div>
               {roomDetail.owner.id === user?.sub && !member.isOwner && (
-                <Button
-                  size="sm"
-                  onClick={() => removeMember(member)}
-                  color="danger"
+                <Popover
+                  isOpen={isPopoverOpen}
+                  onOpenChange={setPopoverOpen}
+                  placement="right"
                 >
-                  Remove
-                </Button>
+                  <PopoverTrigger>
+                    <Button size="sm" color="danger">
+                      Remove
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <div className="px-1 py-2">
+                      <div className="text-small font-bold">
+                        Are you sure to remove member "{member?.user?.fullName}
+                        "?
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleRemoveMember(member)}
+                          className="px-3 py-1 bg-red-400 rounded-sm text-sm"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setPopoverOpen(false)}
+                          className="px-3 py-1 bg-gray-200 rounded-sm text-sm"
+                        >
+                          No
+                        </button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
             </div>
           ))}
