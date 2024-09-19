@@ -11,6 +11,7 @@ import useAxiosPrivate from "@/app/common/util/axios/useAxiosPrivate";
 import {
   ChevronLeft,
   CircleChevronLeft,
+  CircleX,
   Copy,
   Crown,
   RefreshCcw,
@@ -94,6 +95,7 @@ export default function RoomMemberPage() {
     },
   });
   const [isPopoverOpen, setPopoverOpen] = useState(false);
+  const [isOpenRemoveRoom, setOpenRemoveRoom] = useState(false);
 
   useEffect(() => {
     console.log(user);
@@ -185,6 +187,17 @@ export default function RoomMemberPage() {
     }
   };
 
+  const onRemoveRoom = async () => {
+    try {
+      await axiosPrivate.delete("/room/" + id);
+      ToastSuccess("User removed");
+      router.push("/rooms");
+    } catch (err: any) {
+      console.error(err);
+      ToastError(err.response?.data?.message || "Failed to remove user");
+    }
+  };
+
   const handleCopyInviteCode = async () => {
     if (!roomDetail?.inviteLink) {
       console.error("Invite code not found");
@@ -239,9 +252,44 @@ export default function RoomMemberPage() {
           </TooltipProvider>
 
           <div className="flex flex-col gap-2">
-            <span className="text-2xl font-bold">
-              Group {roomDetail.roomName}
-            </span>
+            <p className="text-2xl font-bold flex gap-2 items-center">
+              Group {roomDetail.roomName}{" "}
+              <Popover
+                isOpen={isOpenRemoveRoom}
+                onOpenChange={setOpenRemoveRoom}
+                placement="right"
+              >
+                <PopoverTrigger>
+                  <CircleX
+                    color={Style.DANGER}
+                    size={25}
+                    className="cursor-pointer"
+                  />
+                </PopoverTrigger>
+                <PopoverContent>
+                  <div className="px-1 py-2">
+                    <div className="text-small font-bold">
+                      Are you sure to remove this room?
+                    </div>
+                    <span>This will remove all members and tasks!</span>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={onRemoveRoom}
+                        className="px-3 py-1 bg-red-400 rounded-sm text-sm"
+                      >
+                        Yes
+                      </button>
+                      <button
+                        onClick={() => setOpenRemoveRoom(false)}
+                        className="px-3 py-1 bg-gray-200 rounded-sm text-sm"
+                      >
+                        No
+                      </button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </p>
             <span>{roomDetail.roomDescription}</span>
             <div className="flex items-center gap-1 text-lg px-3 py-1 bg-slate-100 rounded-sm">
               <Crown size={20} color={Style.CROWN} />
