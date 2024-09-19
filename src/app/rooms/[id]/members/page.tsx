@@ -15,14 +15,10 @@ import {
   Copy,
   Crown,
   RefreshCcw,
+  Settings,
   Star,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+
 import {
   Modal,
   ModalContent,
@@ -35,6 +31,7 @@ import {
   PopoverTrigger,
   Popover,
   PopoverContent,
+  Tooltip,
 } from "@nextui-org/react";
 import {
   Form,
@@ -72,6 +69,11 @@ const addMemberSchema = z.object({
   email: z.string().email().min(6).max(30),
 });
 
+const updateRoomSchema = z.object({
+  name: z.string().min(3).max(30),
+  description: z.string().min(3).max(100),
+});
+
 export default function RoomMemberPage() {
   const params = useParams<{ id: string }>();
   const { id } = params;
@@ -88,10 +90,23 @@ export default function RoomMemberPage() {
     onOpenChange: onOpenChangeAddMember,
     onClose: onCloseAddMember,
   } = useDisclosure();
+  const {
+    isOpen: isOpenUpdateRoom,
+    onOpen: onOpenUpdateRoom,
+    onClose: onCloseUpdateRoom,
+    onOpenChange: onOpenChangeUpdateRoom,
+  } = useDisclosure();
   const addMemberForm = useForm<z.infer<typeof addMemberSchema>>({
     resolver: zodResolver(addMemberSchema),
     defaultValues: {
       email: "",
+    },
+  });
+  const updateRoomForm = useForm<z.infer<typeof updateRoomSchema>>({
+    resolver: zodResolver(updateRoomSchema),
+    defaultValues: {
+      name: roomDetail?.roomName,
+      description: roomDetail?.roomDescription,
     },
   });
   const [isPopoverOpen, setPopoverOpen] = useState(false);
@@ -139,6 +154,8 @@ export default function RoomMemberPage() {
       });
 
       setIsOwner(user?.sub === detail.owner.id);
+      updateRoomForm.setValue("name", detail?.roomName);
+      updateRoomForm.setValue("description", detail?.roomDescription);
     } catch (err: any) {
       console.error(err);
       ToastError(err?.response?.data?.message || "Failed to load room");
@@ -164,6 +181,29 @@ export default function RoomMemberPage() {
       onCloseAddMember();
     } catch (error: any) {
       ToastError(error.response?.data?.message || "Failed to add member");
+    }
+  }
+
+  async function onUpdateRoom(values: z.infer<typeof updateRoomSchema>) {
+    try {
+      if (
+        values?.name === roomDetail?.roomName &&
+        values?.description === roomDetail?.roomDescription
+      ) {
+        ToastError("No changes found");
+        return;
+      }
+
+      console.log(values);
+      await axiosPrivate.put(`/room/${id}`, {
+        name: values.name,
+        description: values.description,
+      });
+      ToastSuccess("Room updated successfully");
+      onCloseUpdateRoom();
+      loadRoom();
+    } catch (error: any) {
+      ToastError(error.response?.data?.message || "Failed to update room");
     }
   }
 
@@ -234,26 +274,93 @@ export default function RoomMemberPage() {
     <div className="">
       <div className="mb-4 flex justify-between gap-4 border rounded-md p-4 shadow-sm">
         <div className="flex gap-2 justify-start">
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/rooms"
-                  passHref
-                  className="h-full flex justify-center rounded-sm w-8 items-center bg-slate-100 hover:bg-slate-200"
-                >
-                  <ChevronLeft size={25} />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Back to rooms</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Modal
+            isOpen={isOpenUpdateRoom}
+            onOpenChange={onOpenUpdateRoom}
+            placement="center"
+          >
+            <ModalContent>
+              {(onClose) => (
+                <Form {...updateRoomForm}>
+                  <form
+                    onSubmit={updateRoomForm.handleSubmit(onUpdateRoom)}
+                    className="space-y-6"
+                  >
+                    <ModalHeader className="flex flex-col gap-1">
+                      Update room
+                    </ModalHeader>
+                    <ModalBody>
+                      <FormField
+                        control={updateRoomForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="Room name"
+                                placeholder="Input room name..."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={updateRoomForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="Room description"
+                                placeholder="Input room description..."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </ModalBody>
+                    <ModalFooter>
+                      <Button
+                        color="danger"
+                        variant="light"
+                        onPress={onCloseUpdateRoom}
+                      >
+                        Close
+                      </Button>
+                      <Button color="primary" type="submit">
+                        Update
+                      </Button>
+                    </ModalFooter>
+                  </form>
+                </Form>
+              )}
+            </ModalContent>
+          </Modal>
+
+          <Tooltip content="Back to rooms">
+            <Link
+              href="/rooms"
+              passHref
+              className="h-full flex justify-center rounded-sm w-8 items-center bg-slate-100 hover:bg-slate-200"
+            >
+              <ChevronLeft size={25} />
+            </Link>
+          </Tooltip>
 
           <div className="flex flex-col gap-2">
             <p className="text-2xl font-bold flex gap-2 items-center">
-              Group {roomDetail.roomName}{" "}
+              Group "{roomDetail.roomName}"
+              <Settings
+                onClick={onOpenChangeUpdateRoom}
+                size={25}
+                className="cursor-pointer"
+              />
               <Popover
                 isOpen={isOpenRemoveRoom}
                 onOpenChange={setOpenRemoveRoom}
@@ -266,6 +373,7 @@ export default function RoomMemberPage() {
                     className="cursor-pointer"
                   />
                 </PopoverTrigger>
+
                 <PopoverContent>
                   <div className="px-1 py-2">
                     <div className="text-small font-bold">

@@ -31,6 +31,7 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
+  Tooltip,
 } from "@nextui-org/react";
 import {
   Form,
@@ -41,12 +42,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -110,6 +106,10 @@ const updateTaskSchema = z.object({
 });
 
 const today = new Date();
+const updateRoomSchema = z.object({
+  name: z.string().min(3).max(30),
+  description: z.string().min(3).max(100),
+});
 
 function RoomTasksPage() {
   const params = useParams<{ id: string }>();
@@ -133,6 +133,12 @@ function RoomTasksPage() {
     onOpenChange: onOpenChangeUpdateTask,
     onClose: onCloseUpdateTask,
   } = useDisclosure();
+  const {
+    isOpen: isOpenUpdateRoom,
+    onOpen: onOpenUpdateRoom,
+    onClose: onCloseUpdateRoom,
+    onOpenChange: onOpenChangeUpdateRoom,
+  } = useDisclosure();
 
   const addTaskForm = useForm<z.infer<typeof addTaskSchema>>({
     resolver: zodResolver(addTaskSchema),
@@ -155,6 +161,14 @@ function RoomTasksPage() {
     },
   });
 
+  const updateRoomForm = useForm<z.infer<typeof updateRoomSchema>>({
+    resolver: zodResolver(updateRoomSchema),
+    defaultValues: {
+      name: roomDetail?.roomName,
+      description: roomDetail?.roomDescription,
+    },
+  });
+
   const [members, setMembers] = useState<Member[]>([]);
   const [isOpenRemoveRoom, setOpenRemoveRoom] = useState(false);
 
@@ -166,15 +180,10 @@ function RoomTasksPage() {
       if (!id) return;
       try {
         setLoading(true);
-        const roomData = await axiosPrivate.get<RoomDetailResponse>(
-          "/room/" + id
-        );
-        console.log("Room data:", roomData.data.data);
 
-        setRoomDetail(roomData.data.data);
-        // setRoomTaskList(tasksData);
-        loadMembers();
-        loadRoomTasks();
+        await loadRoom();
+        await loadMembers();
+        await loadRoomTasks();
       } catch (err: any) {
         console.error(err);
         ToastError(err.response?.data?.message || "Failed to fetch room data");
@@ -186,6 +195,46 @@ function RoomTasksPage() {
 
     fetchData();
   }, [user]);
+
+  const loadRoom = async () => {
+    try {
+      const roomData = await axiosPrivate.get<RoomDetailResponse>(
+        "/room/" + id
+      );
+      const detail = roomData.data.data;
+      setRoomDetail(detail);
+
+      updateRoomForm.setValue("name", detail?.roomName);
+      updateRoomForm.setValue("description", detail?.roomDescription);
+    } catch (err: any) {
+      console.error(err);
+      ToastError(err?.response?.data?.message || "Failed to load room");
+      router.push("/rooms");
+    }
+  };
+
+  async function onUpdateRoom(values: z.infer<typeof updateRoomSchema>) {
+    try {
+      if (
+        values?.name === roomDetail?.roomName &&
+        values?.description === roomDetail?.roomDescription
+      ) {
+        ToastError("No changes found");
+        return;
+      }
+
+      console.log(values);
+      await axiosPrivate.put(`/room/${id}`, {
+        name: values.name,
+        description: values.description,
+      });
+      ToastSuccess("Room updated successfully");
+      onCloseUpdateRoom();
+      await loadRoom();
+    } catch (error: any) {
+      ToastError(error.response?.data?.message || "Failed to update room");
+    }
+  }
 
   const handleCopyInviteCode = async () => {
     if (!roomDetail?.inviteLink) {
@@ -351,25 +400,92 @@ function RoomTasksPage() {
     <div className="">
       <div className="mb-4 flex justify-between border rounded-md p-4 shadow-sm">
         <div className="flex justify-start gap-2">
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/rooms"
-                  passHref
-                  className="h-full flex justify-center rounded-sm w-8 items-center bg-slate-100 hover:bg-slate-200 cursor-pointer"
-                >
-                  <ChevronLeft size={25} />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Back to rooms</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Modal
+            isOpen={isOpenUpdateRoom}
+            onOpenChange={onOpenUpdateRoom}
+            placement="center"
+          >
+            <ModalContent>
+              {(onClose) => (
+                <Form {...updateRoomForm}>
+                  <form
+                    onSubmit={updateRoomForm.handleSubmit(onUpdateRoom)}
+                    className="space-y-6"
+                  >
+                    <ModalHeader className="flex flex-col gap-1">
+                      Update room
+                    </ModalHeader>
+                    <ModalBody>
+                      <FormField
+                        control={updateRoomForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="Room name"
+                                placeholder="Input room name..."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={updateRoomForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="Room description"
+                                placeholder="Input room description..."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </ModalBody>
+                    <ModalFooter>
+                      <Button
+                        color="danger"
+                        variant="light"
+                        onPress={onCloseUpdateRoom}
+                      >
+                        Close
+                      </Button>
+                      <Button color="primary" type="submit">
+                        Update
+                      </Button>
+                    </ModalFooter>
+                  </form>
+                </Form>
+              )}
+            </ModalContent>
+          </Modal>
+
+          <Tooltip content="Back to rooms">
+            <Link
+              href="/rooms"
+              passHref
+              className="h-full flex justify-center rounded-sm w-8 items-center bg-slate-100 hover:bg-slate-200"
+            >
+              <ChevronLeft size={25} />
+            </Link>
+          </Tooltip>
           <div className="flex flex-col gap-2">
             <p className="text-2xl font-bold flex gap-2 items-center">
-              Group {roomDetail.roomName}{" "}
+              Group "{roomDetail.roomName}"
+              <Settings
+                onClick={onOpenChangeUpdateRoom}
+                size={25}
+                className="cursor-pointer"
+              />
               <Popover
                 isOpen={isOpenRemoveRoom}
                 onOpenChange={setOpenRemoveRoom}
@@ -555,7 +671,11 @@ function RoomTasksPage() {
         </span>
       </div>
 
-      {roomTaskList.length > 0 ? (
+      {loadingTasks ? (
+        <div className="text-center">
+          <Spinner />
+        </div>
+      ) : roomTaskList.length > 0 ? (
         <div className="flex flex-col gap-2">
           {roomTaskList.map((task, index) => (
             <div
@@ -694,23 +814,25 @@ function RoomTasksPage() {
                 </span>
                 <div className="flex flex-col">
                   <h1 className="text-xl">{task.title}</h1>
-                  <p className="flex items-center gap-2">
+                  <p className="flex items-center">
                     {task.user ? (
-                      <>
-                        <CircleUserRound
-                          size={20}
-                          className="text-xl text-blue-500"
-                        />
-                        <span>{task.user.fullName}</span>
-                      </>
+                      <Tooltip content={task.user.email}>
+                        <p className="flex items-center gap-1">
+                          <CircleUserRound
+                            size={20}
+                            className="text-xl text-blue-500"
+                          />
+                          <span>{task.user.fullName}</span>
+                        </p>
+                      </Tooltip>
                     ) : (
-                      <>
+                      <p className="flex items-center gap-1">
                         <CircleUserRound
                           size={20}
                           className="text-xl text-red-500"
                         />
                         <span className="text-red-500">Unassigned</span>
-                      </>
+                      </p>
                     )}
                   </p>
                   <p className="text-sm mt-4">
@@ -755,8 +877,6 @@ function RoomTasksPage() {
             </div>
           ))}
         </div>
-      ) : loadingTasks ? (
-        <Spinner />
       ) : (
         <h1 className="text-red-500 text-center text-lg">No tasks</h1>
       )}

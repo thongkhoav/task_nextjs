@@ -32,6 +32,10 @@ type Notification = {
   createdAt: string;
 };
 
+type NotificationsResponse = {
+  data: Notification[];
+};
+
 const NotificationContext = createContext<{
   notifications: Notification[];
   markNotificationAsRead?: (notificationId: string, isReadAll: boolean) => void;
@@ -51,18 +55,12 @@ export default function NotificationProvider({
   children: React.ReactNode;
 }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notReadNotifications, setNotReadNotifications] = useState<number>(0);
   const axiosPrivate = useAxiosPrivate();
   const { user, tokens } = useAppContext();
   const setUpFirebaseMessaging = async () => {
     if (!user?.sub || !tokens?.refresh_token) return;
-    const savedNotifications = await axiosPrivate.get(`/notification`, {
-      params: {
-        page: 1,
-        pageSize: 100,
-      },
-    });
-    setNotifications(savedNotifications?.data?.data);
-    console.log("Saved Notifications:", savedNotifications?.data?.data);
+    await getNotifications();
 
     firebaseCloudMessaging
       .init()
@@ -89,20 +87,10 @@ export default function NotificationProvider({
           const { title, body } = payload?.notification;
           if (title && body) {
             payload?.notification?.body &&
-              ToastInfo(NotificationContent(title, body));
+              ToastInfo(NotificationContent(title, body), 6000);
           }
 
-          const savedNotifications = await axiosPrivate.get(
-            `/notification/${user?.sub}`,
-            {
-              params: {
-                page: 1,
-                pageSize: 100,
-              },
-            }
-          );
-          setNotifications(savedNotifications?.data?.data);
-          console.log("Saved Notifications:", savedNotifications?.data?.data);
+          await getNotifications();
         });
       } catch (error) {
         console.error(error);
@@ -125,17 +113,29 @@ export default function NotificationProvider({
         notificationId,
         isReadAll,
       });
-      const savedNotifications = await axiosPrivate.get(`/notification`, {
+
+      await getNotifications();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getNotifications = async () => {
+    if (!user?.sub) return;
+    const savedNotifications = await axiosPrivate.get<NotificationsResponse>(
+      `/notification/${user?.sub}`,
+      {
         params: {
           page: 1,
           pageSize: 100,
         },
-      });
-      setNotifications(savedNotifications?.data?.data);
-      console.log("Saved Notifications:", savedNotifications?.data?.data);
-    } catch (error) {
-      console.error(error);
-    }
+      }
+    );
+    setNotifications(savedNotifications?.data?.data || notifications);
+    setNotReadNotifications(
+      savedNotifications?.data?.data.filter((noti) => !noti?.isRead).length
+    );
+    console.log("Notifications:", savedNotifications?.data?.data);
   };
 
   useEffect(() => {
@@ -167,13 +167,7 @@ export default function NotificationProvider({
             </Link>
             {notifications.length > 0 && (
               <Popover placement="right">
-                <Badge
-                  content={
-                    notifications.filter((notification) => !notification.isRead)
-                      .length
-                  }
-                  color="danger"
-                >
+                <Badge content={notReadNotifications} color="danger">
                   <PopoverTrigger>
                     <Bell
                       size={25}
