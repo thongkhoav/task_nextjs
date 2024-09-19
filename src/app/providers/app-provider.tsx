@@ -1,7 +1,7 @@
 "use client";
 
 import { loginApi, TokenPair } from "@/apiRequests/auth/login.api";
-import { NextUIProvider } from "@nextui-org/react";
+import { NextUIProvider, Tooltip } from "@nextui-org/react";
 import { useCallback, useContext, useEffect, useState } from "react";
 
 import { createContext } from "react";
@@ -11,12 +11,7 @@ import { clearCookieLocal, setCookieLocal } from "../common/util/cookie-action";
 import useAxiosPrivate from "../common/util/axios/useAxiosPrivate";
 import { ToastError, ToastInfo, ToastSuccess } from "../common/util/toast";
 import { CircleUserRound, LogOut, UserRound } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+
 import { useRouter } from "next/navigation";
 import { firebaseCloudMessaging } from "../config/firebase";
 import { getMessaging, onMessage } from "firebase/messaging";
@@ -195,18 +190,11 @@ export default function AppProvider({
                   <CircleUserRound />
                   {user.fullName}
                 </div>
-                <TooltipProvider delayDuration={100}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button onClick={handleLogout}>
-                        <LogOut size={25} />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Sign out</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip content="Sign out">
+                  <button onClick={handleLogout}>
+                    <LogOut size={25} />
+                  </button>
+                </Tooltip>
               </div>
             </div>
           )}

@@ -15,14 +15,9 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Tooltip,
 } from "@nextui-org/react";
 import Link from "next/link";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 type Notification = {
   id: string;
@@ -156,14 +151,9 @@ export default function NotificationProvider({
               className="text-lg font-bold flex items-center gap-1 cursor-pointer"
               passHref
             >
-              <TooltipProvider delayDuration={100}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <p>Notifications</p>
-                  </TooltipTrigger>
-                  <TooltipContent>View more</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip content="View more">
+                <p>Notifications</p>
+              </Tooltip>
             </Link>
             {notifications.length > 0 && (
               <Popover placement="right">
