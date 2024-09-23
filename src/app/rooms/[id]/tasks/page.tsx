@@ -13,6 +13,8 @@ import {
   Crown,
   RefreshCcw,
   CircleX,
+  Mail,
+  LogOut,
 } from "lucide-react";
 import { useAppContext } from "@/app/providers/app-provider";
 import { RoomDetail } from "@/apiRequests/room/room-detail.type";
@@ -171,6 +173,7 @@ function RoomTasksPage() {
 
   const [members, setMembers] = useState<Member[]>([]);
   const [isOpenRemoveRoom, setOpenRemoveRoom] = useState(false);
+  const [isOpenLeaveRoom, setOpenLeaveRoom] = useState(false);
 
   useEffect(() => {
     console.log("Room ID:", id);
@@ -378,6 +381,17 @@ function RoomTasksPage() {
     }
   };
 
+  const onLeaveRoom = async () => {
+    try {
+      await axiosPrivate.put("/room/" + id + "/leave");
+      ToastSuccess("You left the room");
+      router.push("/rooms");
+    } catch (err: any) {
+      console.error(err);
+      ToastError(err.response?.data?.message || "Failed to leave room");
+    }
+  };
+
   if (loading) {
     return <Spinner />;
   }
@@ -486,46 +500,90 @@ function RoomTasksPage() {
                 size={25}
                 className="cursor-pointer"
               />
-              <Popover
-                isOpen={isOpenRemoveRoom}
-                onOpenChange={setOpenRemoveRoom}
-                placement="right"
-              >
-                <PopoverTrigger>
-                  <CircleX
-                    color={Style.DANGER}
-                    size={25}
-                    className="cursor-pointer"
-                  />
-                </PopoverTrigger>
-                <PopoverContent>
-                  <div className="px-1 py-2">
-                    <div className="text-small font-bold">
-                      Are you sure to remove this room?
+              {/* Owner remove this room */}
+              {user?.sub === roomDetail?.owner?.id && (
+                <Popover
+                  isOpen={isOpenRemoveRoom}
+                  onOpenChange={setOpenRemoveRoom}
+                  placement="right"
+                >
+                  <PopoverTrigger>
+                    <CircleX
+                      color={Style.DANGER}
+                      size={25}
+                      className="cursor-pointer"
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <div className="px-1 py-2">
+                      <div className="text-small font-bold">
+                        Are you sure to remove this room?
+                      </div>
+                      <span>This will remove all members and tasks!</span>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={onRemoveRoom}
+                          className="px-3 py-1 bg-red-400 rounded-sm text-sm"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setOpenRemoveRoom(false)}
+                          className="px-3 py-1 bg-gray-200 rounded-sm text-sm"
+                        >
+                          No
+                        </button>
+                      </div>
                     </div>
-                    <span>This will remove all members and tasks!</span>
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={onRemoveRoom}
-                        className="px-3 py-1 bg-red-400 rounded-sm text-sm"
-                      >
-                        Yes
-                      </button>
-                      <button
-                        onClick={() => setOpenRemoveRoom(false)}
-                        className="px-3 py-1 bg-gray-200 rounded-sm text-sm"
-                      >
-                        No
-                      </button>
+                  </PopoverContent>
+                </Popover>
+              )}
+              {/* Member leave room */}
+              {user?.sub !== roomDetail?.owner?.id && (
+                <Popover
+                  isOpen={isOpenLeaveRoom}
+                  onOpenChange={setOpenLeaveRoom}
+                  placement="right"
+                >
+                  <PopoverTrigger>
+                    <LogOut
+                      color={Style.DANGER}
+                      size={25}
+                      className="cursor-pointer"
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <div className="px-1 py-2">
+                      <div className="text-small font-bold">
+                        Are you sure to leave this room?
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={onLeaveRoom}
+                          className="px-3 py-1 bg-red-400 rounded-sm text-sm"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setOpenLeaveRoom(false)}
+                          className="px-3 py-1 bg-gray-200 rounded-sm text-sm"
+                        >
+                          No
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+                  </PopoverContent>
+                </Popover>
+              )}
             </p>
+
             <span>{roomDetail.roomDescription}</span>
-            <div className="flex items-center gap-1 text-lg px-3 py-1 bg-slate-100 rounded-sm">
-              <Crown size={20} color={Style.CROWN} />
-              {roomDetail.owner.fullName}
+
+            <div className="flex flex-col gap-1 text-base px-3 py-1 bg-slate-100 rounded-sm">
+              <div className="flex gap-1 items-center ">
+                <Crown size={20} color={Style.CROWN} />
+                {roomDetail.owner.fullName}
+              </div>
             </div>
             <p className="flex items-center text-sm gap-2">
               <span>Copy invite code</span>

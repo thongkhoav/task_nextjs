@@ -31,7 +31,7 @@ import {
   Spinner,
 } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
-import { CircleUserRound, Crown } from "lucide-react";
+import { CircleUserRound, Crown, Mail } from "lucide-react";
 import { join } from "path";
 import { Style } from "../common/util/style";
 
@@ -260,7 +260,13 @@ export default function RoomsPage() {
           </ModalContent>
         </Modal>
 
-        <span>{user?.fullName}</span>
+        <div className="flex flex-col ">
+          <span>{user?.fullName}</span>
+          <div className="flex gap-1 items-center text-base font-normal">
+            <Mail size={20} color={Style.BLUE} />
+            <span>{user?.email}</span>
+          </div>
+        </div>
         <div className="flex flex-col justify-between gap-2">
           <button
             onClick={onOpenJoinRoom}

@@ -118,7 +118,7 @@ export default function NotificationProvider({
   const getNotifications = async () => {
     if (!user?.sub) return;
     const savedNotifications = await axiosPrivate.get<NotificationsResponse>(
-      `/notification/${user?.sub}`,
+      `/notification`,
       {
         params: {
           page: 1,

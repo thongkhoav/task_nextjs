@@ -18,7 +18,9 @@ export default async function RootLayout({
       <body className={`${inter.className} w-full`}>
         <AppProvider>
           <div className="mt-10 flex justify-center items-start ">
-            <div className="container flex justify-center">{children}</div>
+            <div className="container flex justify-center max-w-[1000px]">
+              {children}
+            </div>
           </div>
         </AppProvider>
         {/* {children} */}
