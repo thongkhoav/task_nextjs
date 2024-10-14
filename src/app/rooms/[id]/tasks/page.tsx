@@ -15,6 +15,7 @@ import {
   CircleX,
   Mail,
   LogOut,
+  Group,
 } from "lucide-react";
 import { useAppContext } from "@/app/providers/app-provider";
 import { RoomDetail } from "@/apiRequests/room/room-detail.type";
@@ -411,8 +412,8 @@ function RoomTasksPage() {
   }
 
   return (
-    <div className="">
-      <div className="mb-4 flex justify-between border rounded-md p-4 shadow-sm">
+    <div className="h-full flex flex-col ">
+      <div className="my-4 flex justify-between border rounded-md p-4 shadow-sm bg-white">
         <div className="flex justify-start gap-2">
           <Modal
             isOpen={isOpenUpdateRoom}
@@ -487,9 +488,9 @@ function RoomTasksPage() {
             <Link
               href="/rooms"
               passHref
-              className="h-full flex justify-center rounded-sm w-8 items-center bg-slate-100 hover:bg-slate-200"
+              className="h-full flex justify-center rounded-sm px-2 items-center bg-slate-100 hover:bg-slate-200"
             >
-              <ChevronLeft size={25} />
+              <Group size={25} />
             </Link>
           </Tooltip>
           <div className="flex flex-col gap-2">
@@ -719,13 +720,13 @@ function RoomTasksPage() {
         </div>
       </div>
 
-      <div className="mt-10 mb-3 text-center font-bold text-2xl relative">
+      <div className="mt-10 mb-3 text-center font-bold text-3xl relative text-white">
         Tasks
         <span
           className="absolute right-0 cursor-pointer hover:opacity-60"
           onClick={() => loadRoomTasks()}
         >
-          <RefreshCcw />
+          <RefreshCcw color={Style.WHITE} />
         </span>
       </div>
 
@@ -738,7 +739,7 @@ function RoomTasksPage() {
           {roomTaskList.map((task, index) => (
             <div
               key={task.id}
-              className="border rounded-md px-5 py-2 shadow flex justify-between relative"
+              className="border rounded-md px-5 py-2 shadow-sm flex justify-between relative bg-white"
             >
               {user?.sub === roomDetail?.owner?.id && (
                 <button
@@ -936,7 +937,9 @@ function RoomTasksPage() {
           ))}
         </div>
       ) : (
-        <h1 className="text-red-500 text-center text-lg">No tasks</h1>
+        <div className="text-center w-[400px] border rounded-sm border-red-500 bg-red-200 mx-auto py-1">
+          <h1 className="text-red-500 text-lg">No tasks</h1>
+        </div>
       )}
     </div>
   );

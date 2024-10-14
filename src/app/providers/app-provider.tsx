@@ -184,8 +184,8 @@ export default function AppProvider({
           }}
         >
           {user && isAuthenticated && (
-            <div className="w-full flex justify-center mt-5">
-              <div className="flex justify-between gap-5 px-5 min-w-80 py-2 bg-slate-200 rounded-md">
+            <div className="w-full flex justify-center">
+              <div className="flex justify-between gap-5 px-5 min-w-80 py-2 bg-slate-200 rounded-md mt-5">
                 <Tooltip content={user?.email}>
                   <div className="text-lg font-bold flex items-center gap-1 cursor-pointer">
                     <CircleUserRound />

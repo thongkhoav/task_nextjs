@@ -141,17 +141,9 @@ export default function RoomsPage() {
     return <Spinner />;
   }
 
-  if (rooms?.length === 0) {
-    return (
-      <div className="text-center">
-        <h1 className="text-red-500 text-lg">Not join any rooms</h1>
-      </div>
-    );
-  }
-
   return (
-    <div className="">
-      <h1 className="text-2xl font-bold mb-4 flex justify-between items-center border rounded-md p-4 shadow-sm">
+    <div className="h-full flex flex-col ">
+      <h1 className="text-2xl font-bold mb-4 flex justify-between items-center border rounded-md p-4 shadow-sm mt-10 bg-white">
         <Modal
           isOpen={isOpenJoinRoom}
           onOpenChange={onOpenChangeJoinRoom}
@@ -280,30 +272,36 @@ export default function RoomsPage() {
       </h1>
 
       <div className="flex flex-col gap-2">
-        {rooms?.map((room, index) => (
-          <div
-            key={index}
-            className="border rounded-md px-5 py-2 shadow flex justify-between items-center"
-          >
-            <div>
-              <Link
-                href={`/rooms/${room.id}/tasks`}
-                className="text-xl font-bold underline cursor-pointer"
-              >
-                {room.name}
-              </Link>
+        {rooms?.length > 0 ? (
+          rooms?.map((room, index) => (
+            <div
+              key={index}
+              className="border rounded-md px-5 py-2 shadow-sm flex justify-between items-center bg-white"
+            >
+              <div>
+                <Link
+                  href={`/rooms/${room.id}/tasks`}
+                  className="text-xl font-bold underline cursor-pointer"
+                >
+                  {room.name}
+                </Link>
 
-              <p className="flex items-center gap-2">
-                <Crown size={20} color={Style.CROWN} />
-                {room?.owner?.fullName}
-              </p>
-              <p className="text-sm mt-4">
-                <span className="font-bold">Description: </span>
-                {room.description}
-              </p>
+                <p className="flex items-center gap-2">
+                  <Crown size={20} color={Style.CROWN} />
+                  {room?.owner?.fullName}
+                </p>
+                <p className="text-sm mt-4">
+                  <span className="font-bold">Description: </span>
+                  {room.description}
+                </p>
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="text-center w-[400px] border rounded-sm border-red-500 bg-red-200 mx-auto py-1">
+            <h1 className="text-red-500 text-lg">Not join any rooms</h1>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

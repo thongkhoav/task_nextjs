@@ -14,6 +14,7 @@ import {
   CircleX,
   Copy,
   Crown,
+  Group,
   LogOut,
   Mail,
   RefreshCcw,
@@ -86,6 +87,7 @@ export default function RoomMemberPage() {
   const [isOwner, setIsOwner] = useState(false);
   const axiosPrivate = useAxiosPrivate();
   const [loadingRoom, setLoadingRoom] = useState(true);
+  const [loadingMembers, setLoadingMembers] = useState(false);
   const {
     isOpen: isOpenAddMember,
     onOpen: onOpenAddMember,
@@ -137,6 +139,7 @@ export default function RoomMemberPage() {
 
   const loadMembers = async () => {
     try {
+      setLoadingMembers(true);
       const res = await axiosPrivate.get<MemberListResponse>(
         "/room/" + id + "/users",
         {
@@ -152,6 +155,7 @@ export default function RoomMemberPage() {
       console.error(err);
       ToastError("Failed to load members");
     }
+    setLoadingMembers(false);
   };
 
   const loadRoom = async () => {
@@ -285,8 +289,8 @@ export default function RoomMemberPage() {
   }
 
   return (
-    <div className="">
-      <div className="mb-4 flex justify-between gap-4 border rounded-md p-4 shadow-sm">
+    <div className="h-full flex flex-col ">
+      <div className="my-4 flex justify-between gap-4 border rounded-md p-4 shadow-sm bg-white">
         <div className="flex gap-2 justify-start">
           <Modal
             isOpen={isOpenUpdateRoom}
@@ -361,9 +365,9 @@ export default function RoomMemberPage() {
             <Link
               href="/rooms"
               passHref
-              className="h-full flex justify-center rounded-sm w-8 items-center bg-slate-100 hover:bg-slate-200"
+              className="h-full flex justify-center rounded-sm px-2 items-center bg-slate-100 hover:bg-slate-200"
             >
-              <ChevronLeft size={25} />
+              <Group size={25} />
             </Link>
           </Tooltip>
 
@@ -540,22 +544,24 @@ export default function RoomMemberPage() {
         </div>
       </div>
 
-      <div className="mt-10 mb-3 text-center font-bold text-2xl relative">
+      <div className="mt-10 mb-3 text-center font-bold text-3xl relative text-white">
         Members
         <span
           className="absolute right-0 cursor-pointer hover:opacity-60"
           onClick={() => loadMembers()}
         >
-          <RefreshCcw />
+          <RefreshCcw color={Style.WHITE} />
         </span>
       </div>
 
-      {members.length > 0 ? (
+      {loadingMembers ? (
+        <Spinner />
+      ) : members.length > 0 ? (
         <div className="flex flex-col gap-2">
           {members.map((member, index) => (
             <div
               key={member.user.id}
-              className="border rounded-md px-5 py-2 shadow flex justify-between items-center"
+              className="border rounded-md px-5 py-2 shadow-sm flex justify-between items-center bg-white"
             >
               <div className="flex items-center gap-5">
                 <span className="text-lg font-bold w-7 h-7 flex items-center justify-center rounded-full bg-blue-300">

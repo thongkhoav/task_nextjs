@@ -8,17 +8,17 @@ import Link from "next/link";
 export default function NotificationsPage() {
   const { notifications, markNotificationAsRead } = useNotificationContext();
   return (
-    <div>
-      <div className="mt-10 mb-3 text-center font-bold text-2xl relative">
+    <div className="min-h-screen">
+      <div className=" mb-3 text-center font-bold text-3xl text-white relative mt-5">
         Notifications
       </div>
-      <p className="text-center mb-10">
+      <p className="text-center mb-10 text-white">
         <Link href="/rooms" className="underline hover:opacity-50">
           Rooms
         </Link>
       </p>
 
-      {notifications.length > 0 && (
+      {notifications.length > 0 ? (
         <div>
           {notifications.filter((noti) => !noti?.isRead).length > 0 && (
             <p className="flex justify-end mb-2">
@@ -63,6 +63,10 @@ export default function NotificationsPage() {
               </div>
             ))}
           </div>
+        </div>
+      ) : (
+        <div className="text-center w-[400px] border rounded-sm border-red-500 bg-red-200 mx-auto py-1">
+          <h1 className="text-red-500 text-lg">No notifications</h1>
         </div>
       )}
     </div>

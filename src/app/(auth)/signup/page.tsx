@@ -63,7 +63,7 @@ export default function SignUpPage() {
 
   return (
     <div className=" h-screen flex items-center justify-center">
-      <div className="min-w-[400px] p-5 rounded-md border border-gray-200 shadow-md">
+      <div className="min-w-[400px] p-5 rounded-md border border-gray-200 shadow-md bg-white">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormDescription>

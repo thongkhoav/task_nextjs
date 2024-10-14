@@ -6,7 +6,7 @@ import { useAppContext } from "./app-provider";
 import { firebaseCloudMessaging } from "../config/firebase";
 import * as firebase from "firebase/app";
 import { getMessaging, onMessage } from "firebase/messaging";
-import { ToastInfo } from "../common/util/toast";
+import { ToastError, ToastInfo } from "../common/util/toast";
 import { NotificationContent } from "../config/noti-toast-element";
 import { Bell } from "lucide-react";
 import moment from "moment";
@@ -117,20 +117,24 @@ export default function NotificationProvider({
 
   const getNotifications = async () => {
     if (!user?.sub) return;
-    const savedNotifications = await axiosPrivate.get<NotificationsResponse>(
-      `/notification`,
-      {
-        params: {
-          page: 1,
-          pageSize: 100,
-        },
-      }
-    );
-    setNotifications(savedNotifications?.data?.data || notifications);
-    setNotReadNotifications(
-      savedNotifications?.data?.data.filter((noti) => !noti?.isRead).length
-    );
-    console.log("Notifications:", savedNotifications?.data?.data);
+    try {
+      const savedNotifications = await axiosPrivate.get<NotificationsResponse>(
+        `/notification`,
+        {
+          params: {
+            page: 1,
+            pageSize: 100,
+          },
+        }
+      );
+      setNotifications(savedNotifications?.data?.data || notifications);
+      setNotReadNotifications(
+        savedNotifications?.data?.data.filter((noti) => !noti?.isRead).length
+      );
+      console.log("Notifications:", savedNotifications?.data?.data);
+    } catch (error) {
+      ToastError("Failed to get notifications");
+    }
   };
 
   useEffect(() => {
